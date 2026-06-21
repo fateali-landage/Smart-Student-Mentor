@@ -285,7 +285,7 @@ FRONTEND_URL=http://localhost:5173
 
 ## 👨‍💻 Author
 
-### Fateali Landage
+### Fatheali Landage
 
 GitHub:
 https://github.com/fateali-landage
