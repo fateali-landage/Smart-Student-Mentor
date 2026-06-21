@@ -1,0 +1,201 @@
+You are a senior full-stack developer. Upgrade my existing Smart Student Mentorship web app.
+
+Current system:
+
+- Authentication is already implemented (login/register)
+- Roles: Student, Mentor, Admin
+- Database is connected (Supabase)
+- UI dashboards already exist (React-based)
+
+IMPORTANT:
+
+- Do NOT redesign UI (colors, components, theme must stay same)
+- BUT you MUST fix layout responsiveness and remove empty space issues
+- Ensure the app works perfectly on mobile, tablet, and desktop
+
+---
+
+🎯 UI FIX (HIGH PRIORITY)
+
+Fix layout issues causing empty space and poor mobile experience:
+
+- Sidebar:
+  
+  - Hide sidebar on mobile (use hamburger menu)
+  - Show sidebar only on md+ screens
+
+- Main Content:
+  
+  - Remove fixed max-width (like max-w-4xl)
+  - Use full width: w-full px-4 md:px-6
+
+- Layout:
+  
+  - Replace rigid layouts with responsive grid:
+    grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4
+
+- Tables:
+  
+  - Make responsive using:
+    overflow-x-auto w-full
+
+- Cards:
+  
+  - Ensure cards expand full width on mobile
+  - No centered narrow containers
+
+- Pages to fix:
+  
+  - Dashboard → remove right empty space
+  - Reports → align chart + attendance properly
+  - Profile → split into 2 columns on desktop, 1 column on mobile
+
+---
+
+🎯 FEATURE 1: Student Mentorship Request
+
+Add a "Request Mentor" feature for students.
+
+- Button on student dashboard: "Request Mentor"
+
+- Form fields: preferredSubject, message (optional)
+
+- Save to database:
+  {
+  studentId,
+  preferredSubject,
+  message,
+  status: "pending",
+  createdAt
+  }
+
+- Prevent duplicate requests if already pending
+
+---
+
+🎯 FEATURE 2: Admin Assign Mentor
+
+In Admin Dashboard (User Directory):
+
+- Add dropdown for selecting mentor for each student
+- Add "Assign Mentor" button
+
+On assign:
+
+- Update request status → "assigned"
+
+- Save:
+  {
+  studentId,
+  mentorId,
+  assignedAt
+  }
+
+- Only show students with pending requests
+
+---
+
+🎯 FEATURE 3: Mentor Dashboard (My Students)
+
+Create new page: "My Students"
+
+Display:
+
+- List of assigned students
+- Show: name, email, performance data
+
+Add:
+
+- Button: "Give Feedback"
+
+---
+
+🎯 FEATURE 4: Mentor Feedback System
+
+Mentor can submit feedback:
+
+{
+studentId,
+mentorId,
+feedbackText,
+rating (1–5),
+createdAt
+}
+
+- Display feedback on student dashboard
+
+---
+
+🎯 FEATURE 5: Dynamic Student Data
+
+Create collection: studentPerformance
+
+{
+studentId,
+attendance,
+marks: [number],
+studyHours,
+updatedAt
+}
+
+- Replace static UI values with real data
+- Render charts dynamically
+
+If no data:
+
+- Show meaningful empty state message
+
+---
+
+🎯 FEATURE 6: Smart Recommendation Logic
+
+Implement rule-based logic:
+
+- If attendance < 75 → show warning
+- If marks average < 50 → suggest practice
+- If no mentor assigned → suggest requesting mentor
+
+Display:
+
+- "Recommendations for you" on student dashboard
+
+---
+
+🎯 TECH REQUIREMENTS
+
+- Use existing stack (React + Node/Express or Supabase)
+
+- Keep UI components same, only fix layout responsiveness
+
+- Use clean API structure:
+  
+  /api/request-mentor
+  /api/assign-mentor
+  /api/my-students
+  /api/feedback
+  /api/performance
+
+- Role-based access:
+  
+  Student → request mentor
+  Admin → assign mentor
+  Mentor → view students + give feedback
+
+---
+
+🎯 OUTPUT EXPECTED
+
+- Backend APIs (routes + controllers)
+- Database schema/models
+- Frontend integration (React hooks / API calls)
+- Responsive layout fixes (Tailwind or CSS)
+- State handling
+- Error handling
+
+---
+
+FINAL NOTE:
+
+Do NOT redesign UI.
+ONLY fix responsiveness, remove empty space, and connect real functionality.
+Keep code clean, modular, and production-ready.

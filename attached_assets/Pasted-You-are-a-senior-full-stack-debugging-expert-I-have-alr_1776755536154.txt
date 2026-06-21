@@ -1,0 +1,109 @@
+You are a senior full-stack debugging expert.
+
+I have already built a Smart Student Mentorship web app using React + Supabase (or Node/Express).
+
+Your job is to:
+
+1. Analyze the entire codebase (frontend + backend)
+2. Identify ALL issues, including:
+
+   * Runtime errors
+   * Console errors
+   * API failures
+   * неправильные database queries
+   * State management bugs
+   * Undefined/null crashes
+   * Async/await mistakes
+   * Role-based access issues
+   * UI breaking on mobile (layout/overflow/empty space)
+   * Performance issues (unnecessary re-renders, slow queries)
+
+---
+
+🎯 TASKS
+
+1. FIX ERRORS
+
+* Automatically correct all bugs
+* Ensure no console errors
+* Ensure all API calls work correctly
+
+2. VALIDATE DATA FLOW
+
+* Check all API endpoints:
+  /api/request-mentor
+  /api/assign-mentor
+  /api/my-students
+  /api/feedback
+  /api/performance
+
+* Ensure:
+
+  * Correct request/response structure
+  * Proper error handling (try/catch)
+  * Proper status codes
+
+3. DATABASE VALIDATION
+
+* Verify Supabase tables & fields:
+
+  * mentorship_requests
+  * mentor_assignments
+  * feedback
+  * student_performance
+
+* Fix:
+
+  * Wrong column names
+  * Missing fields
+  * Insert/update errors
+  * RLS policy issues (if blocking queries)
+
+4. FRONTEND CHECK
+
+* Fix:
+
+  * Broken state updates
+  * Incorrect API calls
+  * Missing loading states
+  * Crashes on empty data
+
+* Ensure:
+
+  * Clean React hooks usage
+  * Proper dependency arrays
+  * No infinite re-renders
+
+5. UI RESPONSIVENESS FIX
+
+* Remove empty space issues
+* Ensure:
+
+  * Full width layout (no unnecessary max-width)
+  * Sidebar hidden on mobile
+  * Proper grid usage (responsive)
+  * Tables scrollable (overflow-x-auto)
+
+6. EDGE CASE HANDLING
+
+* No data → show meaningful message
+* API failure → show error toast/message
+* Loading → show loader
+
+---
+
+🎯 OUTPUT FORMAT
+
+* List ALL issues found (short explanation)
+* Provide FIXED code (clean & modular)
+* Show BEFORE vs AFTER if needed
+* Highlight critical fixes separately
+
+---
+
+IMPORTANT:
+
+* Do NOT redesign UI
+* Only fix bugs, logic, and responsiveness
+* Make the app production-ready
+* Ensure everything works end-to-end (Student → Admin → Mentor flow)
