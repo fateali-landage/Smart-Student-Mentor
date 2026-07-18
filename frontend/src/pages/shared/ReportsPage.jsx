@@ -75,7 +75,7 @@ export default function ReportsPage() {
             {loading ? (
               <div className="flex items-center justify-center h-full text-gray-400 text-sm">Loading...</div>
             ) : subjectAvg.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={subjectAvg}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />

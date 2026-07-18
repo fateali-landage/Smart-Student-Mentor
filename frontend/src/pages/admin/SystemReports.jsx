@@ -255,7 +255,7 @@ export default function SystemReports() {
           {chartData.length === 0 ? (
             <div className="flex items-center justify-center h-full text-gray-500">No performance records available.</div>
           ) : (
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={288}>
               <BarChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                 <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#718096' }} />

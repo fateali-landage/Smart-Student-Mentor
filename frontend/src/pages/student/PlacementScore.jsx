@@ -160,7 +160,7 @@ export default function PlacementScore() {
           </div>
           <div className="h-64 w-full flex items-center justify-center">
             {isCalculated && (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={256}>
                 <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
                   <PolarGrid stroke="#E2E8F0" />
                   <PolarAngleAxis dataKey="subject" tick={{ fill: '#718096', fontSize: 10 }} />

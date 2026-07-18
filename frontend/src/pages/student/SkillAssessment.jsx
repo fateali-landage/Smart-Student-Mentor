@@ -246,7 +246,7 @@ export default function SkillAssessment() {
               </div>
             </div>
             <div className="h-[280px] w-full flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={280}>
                 <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartData}>
                   <PolarGrid stroke="#E2E8F0" />
                   <PolarAngleAxis dataKey="subject" tick={{ fill: '#718096', fontSize: 11 }} />

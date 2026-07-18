@@ -306,7 +306,7 @@ export default function UserManagement() {
         <div className="card h-48 md:h-auto flex flex-col justify-center items-center border border-gray-100 dark:border-gray-800">
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 self-start">Active Role Distribution</h3>
           <div className="w-full h-36">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={144}>
               <PieChart>
                 <Pie
                   data={roleDistribution()}
