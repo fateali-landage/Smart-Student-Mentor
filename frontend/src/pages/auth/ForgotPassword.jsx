@@ -32,27 +32,53 @@ export default function ForgotPassword() {
   const navigate = useNavigate();
   const { showToast } = useToast();
 
-  const [step, setStep] = useState(1); // 1 = enter email, 2 = enter new password
+  const [step, setStep] = useState(1); // 1 = enter email, 2 = enter verification code & new password
   const [email, setEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [done, setDone] = useState(false);
 
-  const handleEmailStep = (e) => {
+  const handleEmailStep = async (e) => {
     e.preventDefault();
     if (!email) {
       showToast('Please enter your registered email address.', 'warning');
       return;
     }
-    // Move to step 2 — actual reset happens on step 2
-    setStep(2);
+    
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${BASE_URL}/api/reset-password/request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      
+      const data = await res.json();
+      if (res.ok && data.status === 'success') {
+        showToast('If the email exists, a verification code has been sent.', 'info');
+        setStep(2);
+      } else {
+        showToast(data.message || 'Failed to request reset.', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Cannot reach server. Check your connection.', 'error');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleReset = async (e) => {
     e.preventDefault();
+
+    if (!verificationCode) {
+      showToast('Please enter the verification code.', 'warning');
+      return;
+    }
 
     if (!newPassword || !confirmPassword) {
       showToast('Please fill in both password fields.', 'warning');
@@ -75,17 +101,17 @@ export default function ForgotPassword() {
       const res = await fetch(`${BASE_URL}/api/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, new_password: newPassword }),
+        body: JSON.stringify({ email, new_password: newPassword, code: verificationCode }),
       });
 
       const data = await res.json();
 
-      if (data.status === 'success') {
+      if (res.ok && data.status === 'success') {
         setDone(true);
         showToast('Password reset successfully! Redirecting to login...', 'success');
         setTimeout(() => navigate('/login'), 2500);
       } else {
-        showToast(data.message || 'Reset failed. Please check your email and try again.', 'error');
+        showToast(data.message || 'Reset failed. Please check your verification code.', 'error');
       }
     } catch (error) {
       console.error(error);
@@ -94,6 +120,7 @@ export default function ForgotPassword() {
       setIsLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50/50 dark:bg-gray-900 p-4 relative overflow-hidden">
@@ -171,6 +198,21 @@ export default function ForgotPassword() {
 
             <form onSubmit={handleReset} className="space-y-5">
               <div>
+                <label className="text-xs font-bold text-gray-500 mb-2 block uppercase tracking-wider">Verification Code</label>
+                <div className="relative">
+                  <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type="text"
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value)}
+                    className="input-field pl-12 h-12"
+                    placeholder="Enter 6-digit code"
+                    maxLength={6}
+                  />
+                </div>
+              </div>
+
+              <div>
                 <label className="text-xs font-bold text-gray-500 mb-2 block uppercase tracking-wider">New Password</label>
                 <div className="relative">
                   <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -181,6 +223,7 @@ export default function ForgotPassword() {
                     className="input-field pl-12 pr-12 h-12"
                     placeholder="Enter new password"
                   />
+
                   <button type="button" onClick={() => setShowPass(!showPass)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
                     {showPass ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}

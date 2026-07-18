@@ -358,6 +358,19 @@ def init_db():
             """)
 
             # ----------------------------------------------------------------
+            # password_resets
+            # ----------------------------------------------------------------
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS password_resets (
+                    id         SERIAL PRIMARY KEY,
+                    email      TEXT NOT NULL,
+                    code       TEXT NOT NULL,
+                    expires_at TIMESTAMPTZ NOT NULL,
+                    created_at TIMESTAMPTZ DEFAULT NOW()
+                );
+            """)
+
+            # ----------------------------------------------------------------
             # Indexes
             # ----------------------------------------------------------------
             for idx_sql in [
@@ -372,8 +385,10 @@ def init_db():
                 "CREATE INDEX IF NOT EXISTS idx_mentor_requests_student ON mentor_requests(student_id);",
                 "CREATE INDEX IF NOT EXISTS idx_users_email             ON users(email);",
                 "CREATE INDEX IF NOT EXISTS idx_users_role              ON users(role);",
+                "CREATE INDEX IF NOT EXISTS idx_password_resets_email   ON password_resets(email);",
             ]:
                 cur.execute(idx_sql)
+
 
         conn.commit()
         logger.info("✅ Database initialised successfully.")
@@ -673,45 +688,97 @@ def logout():
         return internal_error(exc, "logout")
 
 
+@app.route("/api/reset-password/request", methods=["POST"])
+def request_reset_password():
+    """Generate a 6-digit OTP code for password reset and log it."""
+    import random
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip().lower()
+
+    if not email:
+        return jsonify({"status": "error", "message": "email is required"}), 400
+
+    try:
+        db = get_db()
+        cur = db.cursor()
+        
+        # Verify user exists (and not deleted/inactive)
+        cur.execute("SELECT id FROM users WHERE email = %s AND deleted_at IS NULL AND is_active = TRUE", (email,))
+        user = cur.fetchone()
+        
+        if not user:
+            # Generic response to prevent user enumeration
+            return jsonify({"status": "success", "message": "If the email is registered, a recovery code has been sent."}), 200
+
+        # Generate a 6-digit code
+        code = f"{random.randint(100000, 999999)}"
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=15)
+
+        # Store in db
+        cur.execute("DELETE FROM password_resets WHERE email = %s", (email,))
+        cur.execute(
+            "INSERT INTO password_resets (email, code, expires_at) VALUES (%s, %s, %s)",
+            (email, code, expires_at)
+        )
+        db.commit()
+
+        # Simulate sending email by logging code
+        logger.info(f"🔑 Password recovery code for {email} is: {code} (expires in 15 mins)")
+
+        return jsonify({"status": "success", "message": "If the email is registered, a recovery code has been sent."}), 200
+
+    except Exception as exc:
+        return internal_error(exc, "request_reset_password")
+
+
 @app.route("/api/reset-password", methods=["POST"])
 def reset_password():
-    """
-    Reset password by email verification.
-    NOTE: In a real system this should send a signed e-mail link.
-          This endpoint requires the caller to know the email and new password.
-    """
-    data      = request.get_json(silent=True) or {}
-    email     = (data.get("email")        or "").strip().lower()
-    new_pass  = (data.get("new_password") or "").strip()
+    """Reset password using email verification code (OTP)."""
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or "").strip().lower()
+    new_pass = (data.get("new_password") or "").strip()
+    code = (data.get("code") or "").strip()
 
-    if not email or not new_pass:
-        return jsonify({"status": "error", "message": "email and new_password are required"}), 400
+    if not email or not new_pass or not code:
+        return jsonify({"status": "error", "message": "email, new_password, and code are required"}), 400
 
     if len(new_pass) < 6:
         return jsonify({"status": "error", "message": "Password must be at least 6 characters"}), 400
 
     try:
-        db  = get_db()
+        db = get_db()
         cur = db.cursor()
+        
+        # Verify code exists and is valid
         cur.execute(
-            "SELECT id FROM users WHERE email = %s AND deleted_at IS NULL",
-            (email,),
+            "SELECT id FROM password_resets WHERE email = %s AND code = %s AND expires_at > NOW()",
+            (email, code)
         )
-        user = cur.fetchone()
+        reset_req = cur.fetchone()
+        if not reset_req:
+            return jsonify({"status": "error", "message": "Invalid or expired verification code"}), 400
 
+        # Get user
+        cur.execute("SELECT id FROM users WHERE email = %s AND deleted_at IS NULL", (email,))
+        user = cur.fetchone()
         if not user:
-            # Return 200 to avoid user enumeration
-            return jsonify({"status": "success", "message": "If that email exists, the password has been reset"}), 200
+            return jsonify({"status": "error", "message": "User not found"}), 404
 
         hashed = bcrypt.hashpw(new_pass.encode(), bcrypt.gensalt()).decode()
+        
+        # Update password
         cur.execute(
             "UPDATE users SET password = %s, updated_at = NOW() WHERE id = %s",
-            (hashed, user["id"]),
+            (hashed, user["id"])
         )
-        # Invalidate all existing refresh tokens for this user
+        
+        # Invalidate code
+        cur.execute("DELETE FROM password_resets WHERE email = %s", (email,))
+        
+        # Invalidate refresh tokens
         cur.execute("DELETE FROM refresh_tokens WHERE user_id = %s", (user["id"],))
+        
         db.commit()
-
         return jsonify({"status": "success", "message": "Password reset successfully"}), 200
 
     except Exception as exc:
