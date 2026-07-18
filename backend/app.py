@@ -173,6 +173,9 @@ def init_db():
                     linkedin_url     TEXT,
                     profile_pic_url  TEXT,
                     resume_url       TEXT,
+                    pref_email_notifications BOOLEAN DEFAULT TRUE,
+                    pref_activity_digest      BOOLEAN DEFAULT FALSE,
+                    pref_mentorship_requests  BOOLEAN DEFAULT TRUE,
                     mentor_id        INTEGER REFERENCES users(id) ON DELETE SET NULL,
                     is_active        BOOLEAN DEFAULT TRUE,
                     created_at       TIMESTAMPTZ DEFAULT NOW(),
@@ -191,6 +194,9 @@ def init_db():
                 ("linkedin_url",    "TEXT"),
                 ("profile_pic_url", "TEXT"),
                 ("resume_url",       "TEXT"),
+                ("pref_email_notifications", "BOOLEAN DEFAULT TRUE"),
+                ("pref_activity_digest", "BOOLEAN DEFAULT FALSE"),
+                ("pref_mentorship_requests", "BOOLEAN DEFAULT TRUE"),
                 ("is_active",       "BOOLEAN DEFAULT TRUE"),
                 ("created_at",      "TIMESTAMPTZ DEFAULT NOW()"),
                 ("updated_at",      "TIMESTAMPTZ DEFAULT NOW()"),
@@ -876,8 +882,9 @@ def get_me():
         cur.execute(
             """
             SELECT id, name, email, role, bio, phone, skills, interests,
-                   github_url, linkedin_url, profile_pic_url, resume_url, mentor_id,
-                   is_active, created_at, updated_at
+                   github_url, linkedin_url, profile_pic_url, resume_url, 
+                   pref_email_notifications, pref_activity_digest, pref_mentorship_requests,
+                   mentor_id, is_active, created_at, updated_at
             FROM users
             WHERE id = %s AND deleted_at IS NULL
             """,
@@ -957,7 +964,8 @@ def update_me():
     # Regular JSON profile update
     data = request.get_json(force=True, silent=True) or {}
     allowed = ["name", "bio", "phone", "skills", "interests",
-               "github_url", "linkedin_url", "profile_pic_url", "resume_url"]
+               "github_url", "linkedin_url", "profile_pic_url", "resume_url",
+               "pref_email_notifications", "pref_activity_digest", "pref_mentorship_requests"]
 
     updates = {k: data[k] for k in allowed if k in data}
     if not updates:
@@ -979,7 +987,9 @@ def update_me():
         cur.execute(
             """
             SELECT id, name, email, role, bio, phone, skills, interests,
-                   github_url, linkedin_url, profile_pic_url, resume_url, mentor_id, is_active
+                   github_url, linkedin_url, profile_pic_url, resume_url,
+                   pref_email_notifications, pref_activity_digest, pref_mentorship_requests,
+                   mentor_id, is_active
             FROM users WHERE id = %s
             """,
             (g.current_user_id,),
