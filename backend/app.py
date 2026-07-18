@@ -1185,6 +1185,10 @@ def create_goal():
     if not title:
         return jsonify({"status": "error", "message": "title is required"}), 400
 
+    due_date = data.get("due_date")
+    if due_date == "":
+        due_date = None
+
     try:
         db  = get_db()
         cur = db.cursor()
@@ -1201,13 +1205,19 @@ def create_goal():
                 data.get("description"),
                 data.get("category", "general"),
                 data.get("priority", "medium"),
-                data.get("due_date"),
+                due_date,
             ),
         )
         goal = dict(cur.fetchone())
         db.commit()
         return jsonify({"status": "success", "goal": goal}), 201
 
+    except psycopg2.Error as exc:
+        db.rollback()
+        msg = str(exc)
+        if "invalid input syntax for type date" in msg:
+            return jsonify({"status": "error", "message": "Invalid due_date format"}), 400
+        return jsonify({"status": "error", "message": f"Database error: {msg}"}), 400
     except Exception as exc:
         return internal_error(exc, "create_goal")
 
@@ -1222,6 +1232,9 @@ def update_goal(gid):
 
     if not updates:
         return jsonify({"status": "error", "message": "No valid fields to update"}), 400
+
+    if "due_date" in updates and updates["due_date"] == "":
+        updates["due_date"] = None
 
     try:
         db  = get_db()
@@ -1245,6 +1258,12 @@ def update_goal(gid):
         db.commit()
         return jsonify({"status": "success", "goal": updated}), 200
 
+    except psycopg2.Error as exc:
+        db.rollback()
+        msg = str(exc)
+        if "invalid input syntax for type date" in msg:
+            return jsonify({"status": "error", "message": "Invalid due_date format"}), 400
+        return jsonify({"status": "error", "message": f"Database error: {msg}"}), 400
     except Exception as exc:
         return internal_error(exc, "update_goal")
 

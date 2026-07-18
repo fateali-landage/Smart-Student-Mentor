@@ -155,42 +155,7 @@ export default function GoalsPage() {
     setShowEdit(g);
   };
 
-  const GoalForm = ({ onSubmit, submitLabel }) => (
-    <form onSubmit={onSubmit} className="space-y-4">
-      <div>
-        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1.5">Title *</label>
-        <input className="input-field" placeholder="e.g. Complete Data Structures course" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required />
-      </div>
-      <div>
-        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1.5">Description</label>
-        <textarea className="input-field min-h-[80px] resize-none" placeholder="Describe your goal..." value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1.5">Category</label>
-          <select className="input-field" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
-            {CATEGORIES.map(c => <option key={c}>{c}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1.5">Priority</label>
-          <select className="input-field" value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })}>
-            {PRIORITIES.map(p => <option key={p}>{p}</option>)}
-          </select>
-        </div>
-      </div>
-      <div>
-        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1.5">Due Date</label>
-        <input type="date" className="input-field" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} />
-      </div>
-      <div className="flex gap-3 pt-2">
-        <button type="submit" disabled={saving} className="btn-primary flex-1 disabled:opacity-60">
-          {saving ? 'Saving...' : submitLabel}
-        </button>
-        <button type="button" onClick={() => { setShowAdd(false); setShowEdit(null); }} className="btn-secondary flex-1">Cancel</button>
-      </div>
-    </form>
-  );
+  // GoalForm moved outside component to prevent focus-reset bug on re-render
 
   return (
     <div className="space-y-6">
@@ -321,7 +286,16 @@ export default function GoalsPage() {
               <h2 className="font-bold text-lg text-gray-900 dark:text-white flex items-center gap-2"><Plus size={18} className="text-indigo-500" /> Add Goal</h2>
               <button onClick={() => setShowAdd(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
             </div>
-            <div className="p-5"><GoalForm onSubmit={handleAdd} submitLabel="Create Goal" /></div>
+            <div className="p-5">
+              <GoalForm 
+                onSubmit={handleAdd} 
+                submitLabel="Create Goal" 
+                form={form} 
+                setForm={setForm} 
+                saving={saving} 
+                onCancel={() => setShowAdd(false)} 
+              />
+            </div>
           </div>
         </div>
       )}
@@ -334,7 +308,16 @@ export default function GoalsPage() {
               <h2 className="font-bold text-lg text-gray-900 dark:text-white flex items-center gap-2"><Edit3 size={18} className="text-indigo-500" /> Edit Goal</h2>
               <button onClick={() => setShowEdit(null)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
             </div>
-            <div className="p-5"><GoalForm onSubmit={handleEdit} submitLabel="Save Changes" /></div>
+            <div className="p-5">
+              <GoalForm 
+                onSubmit={handleEdit} 
+                submitLabel="Save Changes" 
+                form={form} 
+                setForm={setForm} 
+                saving={saving} 
+                onCancel={() => setShowEdit(null)} 
+              />
+            </div>
           </div>
         </div>
       )}
@@ -385,3 +368,41 @@ export default function GoalsPage() {
     </div>
   );
 }
+
+// GoalForm helper sub-component (defined externally to prevent losing cursor focus on input state change)
+const GoalForm = ({ form, setForm, saving, onSubmit, submitLabel, onCancel }) => (
+  <form onSubmit={onSubmit} className="space-y-4">
+    <div>
+      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1.5">Title *</label>
+      <input className="input-field" placeholder="e.g. Complete Data Structures course" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} required />
+    </div>
+    <div>
+      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1.5">Description</label>
+      <textarea className="input-field min-h-[80px] resize-none" placeholder="Describe your goal..." value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
+    </div>
+    <div className="grid grid-cols-2 gap-4">
+      <div>
+        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1.5">Category</label>
+        <select className="input-field" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
+          {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1.5">Priority</label>
+        <select className="input-field" value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })}>
+          {PRIORITIES.map(p => <option key={p}>{p}</option>)}
+        </select>
+      </div>
+    </div>
+    <div>
+      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1.5">Due Date</label>
+      <input type="date" className="input-field" value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} />
+    </div>
+    <div className="flex gap-3 pt-2">
+      <button type="submit" disabled={saving} className="btn-primary flex-1 disabled:opacity-60">
+        {saving ? 'Saving...' : submitLabel}
+      </button>
+      <button type="button" onClick={onCancel} className="btn-secondary flex-1">Cancel</button>
+    </div>
+  </form>
+);
