@@ -190,7 +190,7 @@ def init_db():
                 ("github_url",      "TEXT"),
                 ("linkedin_url",    "TEXT"),
                 ("profile_pic_url", "TEXT"),
-                ("resume_data",      "TEXT"),
+                ("resume_url",       "TEXT"),
                 ("is_active",       "BOOLEAN DEFAULT TRUE"),
                 ("created_at",      "TIMESTAMPTZ DEFAULT NOW()"),
                 ("updated_at",      "TIMESTAMPTZ DEFAULT NOW()"),
@@ -889,6 +889,11 @@ def get_me():
 
         return jsonify({"status": "success", "user": dict(user)}), 200
 
+    except psycopg2.Error as exc:
+        msg = str(exc)
+        if "resume_url" in msg:
+            return jsonify({"status": "error", "message": "resume_url column does not exist"}), 500
+        return jsonify({"status": "error", "message": f"Database error: {msg}"}), 500
     except Exception as exc:
         return internal_error(exc, "get_me")
 
@@ -940,6 +945,12 @@ def update_me():
             )
             user = cur.fetchone()
             return jsonify({"status": "success", "user": dict(user), "message": "Resume uploaded successfully!"}), 200
+        except psycopg2.Error as exc:
+            db.rollback()
+            msg = str(exc)
+            if "resume_url" in msg:
+                return jsonify({"status": "error", "message": "resume_url column does not exist"}), 500
+            return jsonify({"status": "error", "message": f"Database error: {msg}"}), 500
         except Exception as exc:
             return internal_error(exc, "update_me_resume")
 
@@ -976,6 +987,12 @@ def update_me():
         user = cur.fetchone()
         return jsonify({"status": "success", "user": dict(user)}), 200
 
+    except psycopg2.Error as exc:
+        db.rollback()
+        msg = str(exc)
+        if "resume_url" in msg:
+            return jsonify({"status": "error", "message": "resume_url column does not exist"}), 500
+        return jsonify({"status": "error", "message": f"Database error: {msg}"}), 500
     except Exception as exc:
         return internal_error(exc, "update_me")
 
