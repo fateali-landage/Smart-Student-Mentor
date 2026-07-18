@@ -34,6 +34,11 @@ import SkillAssessment from './pages/student/SkillAssessment';
 import Portfolio from './pages/student/Portfolio';
 import PlacementScore from './pages/student/PlacementScore';
 import AchievementsPage from './pages/student/AchievementsPage';
+import FindMentors from './pages/student/FindMentors';
+import MyMentor from './pages/student/MyMentor';
+
+// Mentor Pages
+import MentorRequests from './pages/mentor/MentorRequests';
 
 // Shared Pages
 import ReportsPage from './pages/shared/ReportsPage';
@@ -68,6 +73,7 @@ function App() {
                   <Route path="/mentor/students" element={<ProtectedRoute roles={['mentor']}><MyStudentsPage /></ProtectedRoute>} />
                   <Route path="/mentor/sessions" element={<ProtectedRoute roles={['mentor']}><SessionManagement /></ProtectedRoute>} />
                   <Route path="/mentor/tasks" element={<ProtectedRoute roles={['mentor']}><TaskManager /></ProtectedRoute>} />
+                  <Route path="/mentor/requests" element={<ProtectedRoute roles={['mentor']}><MentorRequests /></ProtectedRoute>} />
 
                   {/* Student Routes */}
                   <Route path="/student" element={<ProtectedRoute roles={['student']}><StudentDashboard /></ProtectedRoute>} />
@@ -78,6 +84,8 @@ function App() {
                   <Route path="/student/portfolio" element={<ProtectedRoute roles={['student']}><Portfolio /></ProtectedRoute>} />
                   <Route path="/student/placement" element={<ProtectedRoute roles={['student']}><PlacementScore /></ProtectedRoute>} />
                   <Route path="/student/achievements" element={<ProtectedRoute roles={['student']}><AchievementsPage /></ProtectedRoute>} />
+                  <Route path="/student/find-mentors" element={<ProtectedRoute roles={['student']}><FindMentors /></ProtectedRoute>} />
+                  <Route path="/student/my-mentor" element={<ProtectedRoute roles={['student']}><MyMentor /></ProtectedRoute>} />
 
                   {/* Shared Routes */}
                   <Route path="/reports" element={<ProtectedRoute roles={['admin', 'mentor', 'student']}><ReportsPage /></ProtectedRoute>} />

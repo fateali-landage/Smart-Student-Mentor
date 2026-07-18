@@ -50,6 +50,7 @@ function getLinks(role) {
       return [
         { name: 'Dashboard', path: '/mentor', icon: LayoutDashboard, end: true },
         { name: 'My Students', path: '/mentor/students', icon: Users },
+        { name: 'Mentor Requests', path: '/mentor/requests', icon: ClipboardList },
         { name: 'Sessions', path: '/mentor/sessions', icon: Calendar },
         { name: 'Task Manager', path: '/mentor/tasks', icon: ClipboardList },
         { name: 'Reports', path: '/reports', icon: BarChart3 },
@@ -67,6 +68,8 @@ function getLinks(role) {
         { name: 'Portfolio', path: '/student/portfolio', icon: Briefcase },
         { name: 'Placement Score', path: '/student/placement', icon: TrendingUp },
         { name: 'Achievements', path: '/student/achievements', icon: Trophy },
+        { name: 'Find Mentors', path: '/student/find-mentors', icon: Users },
+        { name: 'My Mentor', path: '/student/my-mentor', icon: User },
         { name: 'Profile', path: '/profile', icon: User },
       ];
   }

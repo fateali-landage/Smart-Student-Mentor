@@ -49,6 +49,7 @@ export default function StudentDashboard() {
   const [sessions, setSessions] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const [placementScore, setPlacementScore] = useState(null);
+  const [mentor, setMentor] = useState(null);
 
   const today = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const greeting = () => {
@@ -61,13 +62,14 @@ export default function StudentDashboard() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [perf, fb, gl, sess, rec, ps] = await Promise.allSettled([
+      const [perf, fb, gl, sess, rec, ps, mnt] = await Promise.allSettled([
         authFetch('/api/performance'),
         authFetch('/api/feedback'),
         authFetch('/api/goals'),
         authFetch('/api/sessions?status=approved&limit=3'),
         authFetch('/api/recommendations'),
         authFetch('/api/placement-score'),
+        authFetch('/api/my-mentor'),
       ]);
 
       if (perf.status === 'fulfilled' && perf.value.ok) {
@@ -98,6 +100,10 @@ export default function StudentDashboard() {
       if (ps.status === 'fulfilled' && ps.value.ok) {
         const json = await ps.value.json().catch(() => null);
         setPlacementScore(json);
+      }
+      if (mnt.status === 'fulfilled' && mnt.value.ok) {
+        const json = await mnt.value.json().catch(() => null);
+        setMentor(json?.mentor || null);
       }
     } catch (e) {
       showToast('Failed to load some dashboard data', 'warning');
@@ -165,6 +171,61 @@ export default function StudentDashboard() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Mentor Assignment Section */}
+      <div className="card border border-indigo-100/40 dark:border-gray-800">
+        <h3 className="font-semibold flex items-center gap-2 text-gray-900 dark:text-white mb-4">
+          <Users size={18} className="text-indigo-500" /> Assigned Mentorship
+        </h3>
+        {!mentor ? (
+          <div className="flex flex-col sm:flex-row items-center justify-between p-4 bg-indigo-50/40 dark:bg-indigo-950/20 rounded-xl gap-4">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="text-indigo-500" size={20} />
+              <div>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">No mentor assigned</p>
+                <p className="text-xs text-gray-500">Connect with a mentor to get personalized roadmap and placement insights.</p>
+              </div>
+            </div>
+            <Link to="/student/find-mentors" className="btn-primary py-2 text-xs flex items-center gap-1.5 flex-shrink-0">
+              Find Mentor <ChevronRight size={14} />
+            </Link>
+          </div>
+        ) : (
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between p-4 bg-indigo-50/40 dark:bg-indigo-950/20 rounded-xl gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center font-bold text-lg text-indigo-600 dark:text-indigo-400 shadow-sm flex-shrink-0">
+                {mentor.profile_pic_url ? (
+                  <img src={mentor.profile_pic_url} alt={mentor.name} className="w-full h-full object-cover rounded-xl" />
+                ) : (
+                  mentor.name.charAt(0).toUpperCase()
+                )}
+              </div>
+              <div>
+                <p className="text-sm font-bold text-gray-900 dark:text-white">{mentor.name}</p>
+                <p className="text-xs text-indigo-500 font-semibold capitalize">Personal Mentor · {mentor.email}</p>
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {(Array.isArray(mentor.skills) ? mentor.skills : (mentor.skills ? mentor.skills.split(',') : [])).slice(0, 3).map(skill => (
+                    <span key={skill} className="badge bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-[10px] px-2 py-0.5 border border-gray-100 dark:border-gray-700">
+                      {skill.trim()}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Link to="/student/my-mentor" className="btn-secondary py-2 px-3 text-xs">
+                View Profile
+              </Link>
+              <button 
+                onClick={() => showToast('Session booking is available under placement settings or timeline. Directing...', 'info')}
+                className="btn-primary py-2 px-3 text-xs flex items-center gap-1"
+              >
+                <Calendar size={13} /> Book Session
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Stats Row */}

@@ -238,20 +238,32 @@ def init_db():
             """)
 
             # ----------------------------------------------------------------
-            # mentor_requests
+            # mentor_requests (Safe auto-migration check & schema creation)
             # ----------------------------------------------------------------
             cur.execute("""
+                SELECT 1 FROM information_schema.columns 
+                WHERE table_name='mentor_requests' AND column_name='preferred_subject'
+            """)
+            if cur.fetchone():
+                logger.info("Dropping legacy mentor_requests table to migrate schema...")
+                cur.execute("DROP TABLE IF EXISTS mentor_requests CASCADE")
+                
+            cur.execute("""
                 CREATE TABLE IF NOT EXISTS mentor_requests (
-                    id                SERIAL PRIMARY KEY,
-                    student_id        INTEGER REFERENCES users(id) ON DELETE CASCADE,
-                    preferred_subject TEXT,
-                    message           TEXT,
-                    status            TEXT DEFAULT 'pending'
-                                          CHECK (status IN ('pending','assigned','rejected')),
-                    mentor_id         INTEGER REFERENCES users(id) ON DELETE SET NULL,
-                    created_at        TIMESTAMPTZ DEFAULT NOW(),
-                    assigned_at       TIMESTAMPTZ
+                    id          SERIAL PRIMARY KEY,
+                    student_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    mentor_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    message     TEXT,
+                    status      TEXT NOT NULL DEFAULT 'Pending'
+                                    CHECK (status IN ('Pending', 'Accepted', 'Rejected', 'Cancelled')),
+                    created_at  TIMESTAMPTZ DEFAULT NOW(),
+                    updated_at  TIMESTAMPTZ DEFAULT NOW()
                 );
+            """)
+            cur.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS uq_pending_mentor_request 
+                ON mentor_requests (student_id, mentor_id) 
+                WHERE status = 'Pending';
             """)
 
             # ----------------------------------------------------------------
@@ -2183,6 +2195,419 @@ def review_task(tid):
 
 
 # ===========================================================================
+# ===========================================================================
+# MENTORSHIP REQUEST & ASSIGNMENT ROUTES
+# ===========================================================================
+
+@app.route("/api/mentors", methods=["GET"])
+@require_auth
+def get_mentors():
+    """Get list of active mentors with their average rating and student counts."""
+    try:
+        db = get_db()
+        cur = db.cursor()
+        cur.execute(
+            """
+            SELECT u.id, u.name, u.email, u.bio, u.phone, u.skills, u.interests,
+                   u.github_url, u.linkedin_url, u.profile_pic_url,
+                   (SELECT COUNT(*) FROM users WHERE mentor_id = u.id) AS student_count,
+                   (SELECT ROUND(COALESCE(AVG(rating), 0), 1) FROM feedbacks WHERE mentor_id = u.id) AS average_rating
+            FROM users u
+            WHERE u.role = 'mentor' AND u.is_active = TRUE AND u.deleted_at IS NULL
+            ORDER BY u.name ASC
+            """
+        )
+        mentors = [dict(r) for r in cur.fetchall()]
+        return jsonify({"status": "success", "mentors": mentors}), 200
+    except Exception as exc:
+        return internal_error(exc, "get_mentors")
+
+@app.route("/api/mentors/<int:mid>", methods=["GET"])
+@require_auth
+def get_mentor_by_id(mid):
+    """Get mentor details by id."""
+    try:
+        db = get_db()
+        cur = db.cursor()
+        cur.execute(
+            """
+            SELECT u.id, u.name, u.email, u.bio, u.phone, u.skills, u.interests,
+                   u.github_url, u.linkedin_url, u.profile_pic_url,
+                   (SELECT COUNT(*) FROM users WHERE mentor_id = u.id) AS student_count,
+                   (SELECT ROUND(COALESCE(AVG(rating), 0), 1) FROM feedbacks WHERE mentor_id = u.id) AS average_rating
+            FROM users u
+            WHERE u.id = %s AND u.role = 'mentor' AND u.is_active = TRUE AND u.deleted_at IS NULL
+            """,
+            (mid,)
+        )
+        mentor = cur.fetchone()
+        if not mentor:
+            return jsonify({"status": "error", "message": "Mentor not found or inactive"}), 404
+        return jsonify({"status": "success", "mentor": dict(mentor)}), 200
+    except Exception as exc:
+        return internal_error(exc, "get_mentor_by_id")
+
+@app.route("/api/mentor-requests", methods=["POST"])
+@require_role("student")
+def create_mentor_request():
+    """Student submits a mentorship request to a mentor."""
+    data = request.get_json(force=True, silent=True) or {}
+    mentor_id = data.get("mentor_id")
+    message = (data.get("message") or "").strip()
+
+    if not mentor_id:
+        return jsonify({"status": "error", "message": "mentor_id is required"}), 400
+
+    try:
+        db = get_db()
+        cur = db.cursor()
+
+        # 1. Check if student already has a mentor
+        cur.execute("SELECT mentor_id, name FROM users WHERE id = %s", (g.current_user_id,))
+        student = cur.fetchone()
+        if not student:
+            return jsonify({"status": "error", "message": "Student account not found"}), 404
+            
+        if student["mentor_id"] is not None:
+            return jsonify({"status": "error", "message": "You already have an assigned mentor."}), 400
+
+        # 2. Check if mentor_id is a valid, active mentor
+        cur.execute("SELECT name, role, is_active FROM users WHERE id = %s", (mentor_id,))
+        mentor = cur.fetchone()
+        if not mentor or mentor["role"] != "mentor" or not mentor["is_active"]:
+            return jsonify({"status": "error", "message": "Invalid mentor selected or mentor is inactive"}), 400
+
+        # 3. Prevent requesting oneself
+        if g.current_user_id == mentor_id:
+            return jsonify({"status": "error", "message": "You cannot request yourself."}), 400
+
+        # 4. Insert request
+        cur.execute(
+            """
+            INSERT INTO mentor_requests (student_id, mentor_id, message, status)
+            VALUES (%s, %s, %s, 'Pending')
+            RETURNING *
+            """,
+            (g.current_user_id, mentor_id, message)
+        )
+        req_record = dict(cur.fetchone())
+        db.commit()
+
+        # 5. Notify Mentor (respecting preferences)
+        cur.execute("SELECT pref_mentorship_requests FROM users WHERE id = %s", (mentor_id,))
+        pref = cur.fetchone()
+        if pref and pref["pref_mentorship_requests"]:
+            cur.execute(
+                "INSERT INTO notifications (user_id, message, type) VALUES (%s, %s, %s)",
+                (mentor_id, f"New mentorship request from student '{student['name']}'.", "mentor_request")
+            )
+            db.commit()
+
+        return jsonify({"status": "success", "request": req_record}), 201
+
+    except psycopg2.Error as exc:
+        db.rollback()
+        msg = str(exc)
+        if "uq_pending_mentor_request" in msg or "unique constraint" in msg.lower():
+            return jsonify({"status": "error", "message": "Already Requested"}), 400
+        return jsonify({"status": "error", "message": f"Database error: {msg}"}), 400
+    except Exception as exc:
+        return internal_error(exc, "create_mentor_request")
+
+@app.route("/api/my-mentor", methods=["GET"])
+@require_role("student")
+def get_my_mentor():
+    """Get assigned mentor details for the logged-in student."""
+    try:
+        db = get_db()
+        cur = db.cursor()
+        cur.execute("SELECT mentor_id FROM users WHERE id = %s", (g.current_user_id,))
+        student = cur.fetchone()
+        if not student or student["mentor_id"] is None:
+            return jsonify({"status": "success", "mentor": None}), 200
+
+        cur.execute(
+            """
+            SELECT id, name, email, bio, phone, skills, interests,
+                   github_url, linkedin_url, profile_pic_url
+            FROM users
+            WHERE id = %s AND role = 'mentor' AND deleted_at IS NULL
+            """,
+            (student["mentor_id"],)
+        )
+        mentor = cur.fetchone()
+        return jsonify({"status": "success", "mentor": dict(mentor) if mentor else None}), 200
+    except Exception as exc:
+        return internal_error(exc, "get_my_mentor")
+
+@app.route("/api/my-requests", methods=["GET"])
+@require_role("student")
+def get_my_requests():
+    """Get student's own requests."""
+    try:
+        db = get_db()
+        cur = db.cursor()
+        cur.execute(
+            """
+            SELECT r.id, r.mentor_id, r.message, r.status, r.created_at, r.updated_at,
+                   m.name AS mentor_name, m.profile_pic_url AS mentor_profile_pic
+            FROM mentor_requests r
+            JOIN users m ON m.id = r.mentor_id
+            WHERE r.student_id = %s
+            ORDER BY r.created_at DESC
+            """,
+            (g.current_user_id,)
+        )
+        requests = [dict(row) for row in cur.fetchall()]
+        return jsonify({"status": "success", "requests": requests}), 200
+    except Exception as exc:
+        return internal_error(exc, "get_my_requests")
+
+@app.route("/api/mentor-requests/<int:rid>", methods=["DELETE"])
+@require_role("student")
+def cancel_mentor_request(rid):
+    """Cancel a pending request."""
+    try:
+        db = get_db()
+        cur = db.cursor()
+        cur.execute("SELECT student_id, status FROM mentor_requests WHERE id = %s", (rid,))
+        req = cur.fetchone()
+        if not req:
+            return jsonify({"status": "error", "message": "Request not found"}), 404
+        if req["student_id"] != g.current_user_id:
+            return jsonify({"status": "error", "message": "Access denied"}), 403
+        if req["status"] != "Pending":
+            return jsonify({"status": "error", "message": "Can only cancel pending requests"}), 400
+
+        cur.execute("UPDATE mentor_requests SET status = 'Cancelled', updated_at = NOW() WHERE id = %s", (rid,))
+        db.commit()
+        return jsonify({"status": "success", "message": "Mentorship request cancelled"}), 200
+    except Exception as exc:
+        return internal_error(exc, "cancel_mentor_request")
+
+@app.route("/api/mentor-requests", methods=["GET"])
+@require_role("mentor")
+def get_mentor_requests():
+    """Get pending requests for the logged-in mentor."""
+    try:
+        db = get_db()
+        cur = db.cursor()
+        cur.execute(
+            """
+            SELECT r.id, r.student_id, r.message, r.status, r.created_at,
+                   s.name AS student_name, s.email AS student_email, s.bio AS student_bio,
+                   s.phone AS student_phone, s.skills AS student_skills, s.profile_pic_url AS student_profile_pic
+            FROM mentor_requests r
+            JOIN users s ON s.id = r.student_id
+            WHERE r.mentor_id = %s AND r.status = 'Pending'
+            ORDER BY r.created_at ASC
+            """,
+            (g.current_user_id,)
+        )
+        requests = [dict(row) for row in cur.fetchall()]
+        return jsonify({"status": "success", "requests": requests}), 200
+    except Exception as exc:
+        return internal_error(exc, "get_mentor_requests")
+
+@app.route("/api/mentor-requests/<int:rid>/accept", methods=["PUT"])
+@require_role("mentor")
+def accept_mentor_request(rid):
+    """Accept request, assign student, and reject other pending requests for that student."""
+    try:
+        db = get_db()
+        cur = db.cursor()
+        cur.execute("SELECT student_id, mentor_id, status FROM mentor_requests WHERE id = %s", (rid,))
+        req = cur.fetchone()
+        if not req:
+            return jsonify({"status": "error", "message": "Request not found"}), 404
+        if req["mentor_id"] != g.current_user_id:
+            return jsonify({"status": "error", "message": "Access denied"}), 403
+        if req["status"] != "Pending":
+            return jsonify({"status": "error", "message": "Request is already processed"}), 400
+
+        # 1. Update the request status to Accepted
+        cur.execute("UPDATE mentor_requests SET status = 'Accepted', updated_at = NOW() WHERE id = %s", (rid,))
+        
+        # 2. Assign mentor_id to student in users table
+        cur.execute("UPDATE users SET mentor_id = %s, updated_at = NOW() WHERE id = %s", (g.current_user_id, req["student_id"]))
+        
+        # 3. Reject other pending requests for that student
+        cur.execute(
+            """
+            UPDATE mentor_requests 
+            SET status = 'Rejected', updated_at = NOW() 
+            WHERE student_id = %s AND status = 'Pending' AND id != %s
+            """,
+            (req["student_id"], rid)
+        )
+        db.commit()
+
+        # 4. Notify Student (respecting preferences)
+        cur.execute("SELECT name FROM users WHERE id = %s", (g.current_user_id,))
+        mentor_name = cur.fetchone()["name"]
+        
+        cur.execute("SELECT pref_mentorship_requests FROM users WHERE id = %s", (req["student_id"],))
+        pref = cur.fetchone()
+        if pref and pref["pref_mentorship_requests"]:
+            cur.execute(
+                "INSERT INTO notifications (user_id, message, type) VALUES (%s, %s, %s)",
+                (req["student_id"], f"Your mentorship request to '{mentor_name}' was accepted!", "mentor_request")
+            )
+            db.commit()
+
+        return jsonify({"status": "success", "message": "Request accepted and student assigned successfully"}), 200
+    except Exception as exc:
+        return internal_error(exc, "accept_mentor_request")
+
+@app.route("/api/mentor-requests/<int:rid>/reject", methods=["PUT"])
+@require_role("mentor")
+def reject_mentor_request(rid):
+    """Reject request."""
+    try:
+        db = get_db()
+        cur = db.cursor()
+        cur.execute("SELECT student_id, mentor_id, status FROM mentor_requests WHERE id = %s", (rid,))
+        req = cur.fetchone()
+        if not req:
+            return jsonify({"status": "error", "message": "Request not found"}), 404
+        if req["mentor_id"] != g.current_user_id:
+            return jsonify({"status": "error", "message": "Access denied"}), 403
+        if req["status"] != "Pending":
+            return jsonify({"status": "error", "message": "Request is already processed"}), 400
+
+        cur.execute("UPDATE mentor_requests SET status = 'Rejected', updated_at = NOW() WHERE id = %s", (rid,))
+        db.commit()
+
+        # Notify Student (respecting preferences)
+        cur.execute("SELECT name FROM users WHERE id = %s", (g.current_user_id,))
+        mentor_name = cur.fetchone()["name"]
+        
+        cur.execute("SELECT pref_mentorship_requests FROM users WHERE id = %s", (req["student_id"],))
+        pref = cur.fetchone()
+        if pref and pref["pref_mentorship_requests"]:
+            cur.execute(
+                "INSERT INTO notifications (user_id, message, type) VALUES (%s, %s, %s)",
+                (req["student_id"], f"Your mentorship request to '{mentor_name}' was declined.", "mentor_request")
+            )
+            db.commit()
+
+        return jsonify({"status": "success", "message": "Request declined"}), 200
+    except Exception as exc:
+        return internal_error(exc, "reject_mentor_request")
+
+@app.route("/api/my-students", methods=["GET"])
+@require_role("mentor")
+def get_my_students():
+    """Get list of students assigned to the logged-in mentor."""
+    try:
+        db = get_db()
+        cur = db.cursor()
+        cur.execute(
+            """
+            SELECT id, name, email, bio, phone, skills, interests, github_url, linkedin_url, profile_pic_url
+            FROM users
+            WHERE mentor_id = %s AND role = 'student' AND deleted_at IS NULL
+            ORDER BY name ASC
+            """,
+            (g.current_user_id,)
+        )
+        students = [dict(row) for row in cur.fetchall()]
+        return jsonify({"status": "success", "students": students}), 200
+    except Exception as exc:
+        return internal_error(exc, "get_my_students")
+
+@app.route("/api/admin/mentor-requests", methods=["GET"])
+@require_role("admin")
+def admin_get_mentor_requests():
+    """Admin sees all mentor requests."""
+    try:
+        db = get_db()
+        cur = db.cursor()
+        cur.execute(
+            """
+            SELECT r.id, r.student_id, r.mentor_id, r.message, r.status, r.created_at,
+                   s.name AS student_name, s.email AS student_email,
+                   m.name AS mentor_name, m.email AS mentor_email
+            FROM mentor_requests r
+            JOIN users s ON s.id = r.student_id
+            JOIN users m ON m.id = r.mentor_id
+            ORDER BY r.created_at DESC
+            """
+        )
+        requests = [dict(row) for row in cur.fetchall()]
+        return jsonify({"status": "success", "requests": requests}), 200
+    except Exception as exc:
+        return internal_error(exc, "admin_get_mentor_requests")
+
+@app.route("/api/admin/mentor-assign", methods=["POST"])
+@require_role("admin")
+def admin_assign_mentor():
+    """Admin manually assigns or reassigns a mentor to a student."""
+    data = request.get_json(force=True, silent=True) or {}
+    student_id = data.get("student_id")
+    mentor_id = data.get("mentor_id") # Can be None to unassign
+
+    if not student_id:
+        return jsonify({"status": "error", "message": "student_id is required"}), 400
+
+    try:
+        db = get_db()
+        cur = db.cursor()
+
+        # Check student
+        cur.execute("SELECT name, role FROM users WHERE id = %s", (student_id,))
+        student = cur.fetchone()
+        if not student or student["role"] != "student":
+            return jsonify({"status": "error", "message": "Invalid student_id"}), 400
+
+        # Check mentor if provided
+        mentor_name = None
+        if mentor_id is not None:
+            cur.execute("SELECT name, role, is_active FROM users WHERE id = %s", (mentor_id,))
+            mentor = cur.fetchone()
+            if not mentor or mentor["role"] != "mentor" or not mentor["is_active"]:
+                return jsonify({"status": "error", "message": "Invalid mentor selected or mentor is inactive"}), 400
+            mentor_name = mentor["name"]
+
+        # Update student record
+        cur.execute("UPDATE users SET mentor_id = %s, updated_at = NOW() WHERE id = %s", (mentor_id, student_id))
+        
+        # If mentor_id was set, mark their pending requests as Accepted and others Rejected
+        if mentor_id is not None:
+            cur.execute(
+                """
+                UPDATE mentor_requests 
+                SET status = 'Accepted', updated_at = NOW() 
+                WHERE student_id = %s AND mentor_id = %s AND status = 'Pending'
+                """,
+                (student_id, mentor_id)
+            )
+            cur.execute(
+                """
+                UPDATE mentor_requests 
+                SET status = 'Rejected', updated_at = NOW() 
+                WHERE student_id = %s AND mentor_id != %s AND status = 'Pending'
+                """,
+                (student_id, mentor_id)
+            )
+        db.commit()
+
+        # Notify student (respecting preferences)
+        cur.execute("SELECT pref_mentorship_requests FROM users WHERE id = %s", (student_id,))
+        pref = cur.fetchone()
+        if pref and pref["pref_mentorship_requests"]:
+            msg = f"Your mentor has been updated to '{mentor_name}'." if mentor_name else "You have been unassigned from your mentor."
+            cur.execute(
+                "INSERT INTO notifications (user_id, message, type) VALUES (%s, %s, %s)",
+                (student_id, msg, "mentor_request")
+            )
+            db.commit()
+
+        return jsonify({"status": "success", "message": "Mentor assigned successfully"}), 200
+    except Exception as exc:
+        return internal_error(exc, "admin_assign_mentor")
+
+
 # PORTFOLIO ROUTES
 # ===========================================================================
 
