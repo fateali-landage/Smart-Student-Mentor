@@ -105,8 +105,12 @@ export default function MentorDashboard() {
   }));
 
   // Stats
-  const myFeedbacks = (data.feedbacks || []).filter((f) => f.mentor_id === user?.id || f.mentor_name === user?.name);
-  const myGoals = (data.goals || []).filter((g) => students.some((s) => s.id === g.student_id));
+  const feedbacksList = Array.isArray(data?.feedbacks) ? data.feedbacks : [];
+  const goalsList = Array.isArray(data?.goals) ? data.goals : [];
+  const studentsList = Array.isArray(students) ? students : [];
+
+  const myFeedbacks = feedbacksList.filter((f) => f.mentor_id === user?.id || f.mentor_name === user?.name);
+  const myGoals = goalsList.filter((g) => studentsList.some((s) => s.id === g.student_id));
 
   // Activity feed
   const recentActivity = [
@@ -174,9 +178,9 @@ export default function MentorDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {students.map((s) => {
+                {studentsList.map((s) => {
                   const avg = avgScore(s.marks);
-                  const studentGoals = (data.goals || []).filter((g) => g.student_id === s.id);
+                  const studentGoals = goalsList.filter((g) => g.student_id === s.id);
                   return (
                     <tr key={s.id} className="border-b border-gray-50 dark:border-gray-700/50 hover:bg-gray-50/50 dark:hover:bg-gray-700/20 transition-colors">
                       <td className="py-3">

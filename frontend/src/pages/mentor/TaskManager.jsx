@@ -176,7 +176,8 @@ export default function TaskManager() {
     }
   };
 
-  const filteredTasks = tasks.filter(t => activeTab === 'all' || t.status === activeTab);
+  const tasksList = Array.isArray(tasks) ? tasks : [];
+  const filteredTasks = tasksList.filter(t => activeTab === 'all' || t.status === activeTab);
 
   if (loading) {
     return (
@@ -187,9 +188,9 @@ export default function TaskManager() {
   }
 
   // Summary counts
-  const totalCount = tasks.length;
-  const pendingReview = tasks.filter(t => t.status === 'submitted').length;
-  const completedCount = tasks.filter(t => t.status === 'approved' || t.status === 'reviewed').length;
+  const totalCount = tasksList.length;
+  const pendingReview = tasksList.filter(t => t.status === 'submitted').length;
+  const completedCount = tasksList.filter(t => t.status === 'approved' || t.status === 'reviewed').length;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">

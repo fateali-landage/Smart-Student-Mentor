@@ -290,15 +290,15 @@ export default function UserManagement() {
           <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-50 dark:border-gray-900/50 mt-4 text-center">
             <div className="p-3 bg-indigo-50/30 dark:bg-indigo-950/10 rounded-xl">
               <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Active Users</p>
-              <h4 className="text-xl font-bold text-gray-900 dark:text-white mt-1">{users.filter(u => u.is_active).length}</h4>
+              <h4 className="text-xl font-bold text-gray-900 dark:text-white mt-1">{(Array.isArray(users) ? users : []).filter(u => u.is_active).length}</h4>
             </div>
             <div className="p-3 bg-amber-50/30 dark:bg-amber-950/10 rounded-xl">
               <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Suspended</p>
-              <h4 className="text-xl font-bold text-gray-900 dark:text-white mt-1">{users.filter(u => !u.is_active).length}</h4>
+              <h4 className="text-xl font-bold text-gray-900 dark:text-white mt-1">{(Array.isArray(users) ? users : []).filter(u => !u.is_active).length}</h4>
             </div>
             <div className="p-3 bg-purple-50/30 dark:bg-purple-950/10 rounded-xl">
               <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Total Loaded</p>
-              <h4 className="text-xl font-bold text-gray-900 dark:text-white mt-1">{users.length}</h4>
+              <h4 className="text-xl font-bold text-gray-900 dark:text-white mt-1">{(Array.isArray(users) ? users : []).length}</h4>
             </div>
           </div>
         </div>

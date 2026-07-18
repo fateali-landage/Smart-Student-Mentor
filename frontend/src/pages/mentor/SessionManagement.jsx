@@ -58,7 +58,7 @@ export default function SessionManagement() {
     try {
       const res = await authFetch('/api/sessions');
       const data = await res.json();
-      setSessions(Array.isArray(data) ? data : []);
+      setSessions(Array.isArray(data?.sessions) ? data.sessions : []);
     } catch {
       showToast('Failed to load sessions.', 'error');
     } finally {
@@ -108,9 +108,10 @@ export default function SessionManagement() {
     } finally { setSavingNotes(false); }
   };
 
-  const pending = sessions.filter((s) => s.status === 'pending');
-  const approved = sessions.filter((s) => s.status === 'approved');
-  const completed = sessions.filter((s) => s.status === 'completed');
+  const sessionsList = Array.isArray(sessions) ? sessions : [];
+  const pending = sessionsList.filter((s) => s.status === 'pending');
+  const approved = sessionsList.filter((s) => s.status === 'approved');
+  const completed = sessionsList.filter((s) => s.status === 'completed');
 
   return (
     <div className="w-full space-y-6">

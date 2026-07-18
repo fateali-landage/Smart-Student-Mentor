@@ -71,7 +71,7 @@ export default function Portfolio() {
       const itemsRes = await authFetch('/api/portfolio');
       if (itemsRes.ok) {
         const itemsData = await itemsRes.json();
-        setItems(itemsData.items || itemsData || []);
+        setItems(Array.isArray(itemsData?.portfolio) ? itemsData.portfolio : (Array.isArray(itemsData?.items) ? itemsData.items : (Array.isArray(itemsData) ? itemsData : [])));
       }
     } catch (err) {
       console.error("Error loading portfolio data", err);
@@ -156,7 +156,7 @@ export default function Portfolio() {
         method: 'DELETE'
       });
       if (res.ok) {
-        setItems(prev => prev.filter(item => item.id !== itemId));
+        setItems(prev => (Array.isArray(prev) ? prev : []).filter(item => item.id !== itemId));
         showToast("Portfolio item deleted", "success");
       } else {
         showToast("Failed to delete portfolio item", "error");
@@ -168,7 +168,8 @@ export default function Portfolio() {
   };
 
   // Filter items by active tab
-  const filteredItems = items.filter(item => item.type === activeTab.slice(0, -1) || item.type === activeTab); // Handles singular/plural mapping
+  const itemsList = Array.isArray(items) ? items : [];
+  const filteredItems = itemsList.filter(item => item.type === activeTab.slice(0, -1) || item.type === activeTab); // Handles singular/plural mapping
 
   // Base64 file upload helper
   const handleResumeUpload = async (e) => {

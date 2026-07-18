@@ -97,14 +97,15 @@ export default function MyStudentsPage() {
     } finally { setSubmittingGoal(false); }
   };
 
-  const filtered = students.filter(
+  const studentsList = Array.isArray(students) ? students : [];
+  const filtered = studentsList.filter(
     (s) =>
       s.name?.toLowerCase().includes(search.toLowerCase()) ||
       s.email?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const getStudentGoals = (sid) => (data.goals || []).filter((g) => g.student_id === sid);
-  const getStudentFeedbacks = (sid) => (data.feedbacks || []).filter((f) => f.student_id === sid && (f.mentor_id === user?.id || f.mentor_name === user?.name));
+  const getStudentGoals = (sid) => (Array.isArray(data?.goals) ? data.goals : []).filter((g) => g.student_id === sid);
+  const getStudentFeedbacks = (sid) => (Array.isArray(data?.feedbacks) ? data.feedbacks : []).filter((f) => f.student_id === sid && (f.mentor_id === user?.id || f.mentor_name === user?.name));
 
   const getPerformanceChart = (marks) => {
     if (!Array.isArray(marks) || marks.length === 0) return [];

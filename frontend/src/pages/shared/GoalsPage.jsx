@@ -119,7 +119,7 @@ export default function GoalsPage() {
         <div className="space-y-4">
           <h3 className="text-xl font-bold">Active Goals</h3>
 
-          {goals.map((goal) => (
+          {(Array.isArray(goals) ? goals : []).map((goal) => (
             <div key={goal.id} className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow">
               <div className="flex justify-between mb-4">
                 <h4 className="font-bold">{goal.title}</h4>

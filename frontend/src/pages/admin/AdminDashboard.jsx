@@ -26,9 +26,10 @@ export default function AdminDashboard() {
 
   useEffect(() => { loadPending(); }, [loadPending, data.users]);
 
-  const students = data.users.filter((u) => u.role === 'student');
-  const mentors = data.users.filter((u) => u.role === 'mentor');
-  const filteredUsers = data.users.filter(
+  const usersList = Array.isArray(data?.users) ? data.users : [];
+  const students = usersList.filter((u) => u.role === 'student');
+  const mentors = usersList.filter((u) => u.role === 'mentor');
+  const filteredUsers = usersList.filter(
     (u) => u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
            u.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );

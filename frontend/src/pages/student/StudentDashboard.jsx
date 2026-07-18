@@ -113,17 +113,18 @@ export default function StudentDashboard() {
   const studyHours = performance?.study_hours ?? 0;
   const chartData = marks.map((m, i) => ({ name: m.subject || `#${i + 1}`, score: Number(m.score) || 0 }));
 
-  const completedGoals = goals.filter(g => g.status === 'completed').length;
-  const inProgressGoals = goals.filter(g => g.status === 'in_progress').length;
-  const overdueGoals = goals.filter(g => g.status === 'overdue').length;
-  const recentGoals = goals.slice(0, 3);
+  const goalsList = Array.isArray(goals) ? goals : [];
+  const completedGoals = goalsList.filter(g => g.status === 'completed').length;
+  const inProgressGoals = goalsList.filter(g => g.status === 'in_progress').length;
+  const overdueGoals = goalsList.filter(g => g.status === 'overdue').length;
+  const recentGoals = goalsList.slice(0, 3);
   const placementPct = placementScore?.score?.total ?? placementScore?.overall_score ?? 0;
 
   const statCards = [
-    { label: 'Goals', value: `${completedGoals}/${goals.length}`, sub: `${inProgressGoals} in progress`, icon: <Target size={20} />, color: 'text-indigo-500', bg: 'bg-indigo-50 dark:bg-indigo-900/30' },
+    { label: 'Goals', value: `${completedGoals}/${goalsList.length}`, sub: `${inProgressGoals} in progress`, icon: <Target size={20} />, color: 'text-indigo-500', bg: 'bg-indigo-50 dark:bg-indigo-900/30' },
     { label: 'Attendance', value: `${attendance}%`, sub: attendance >= 75 ? 'On track' : 'Needs attention', icon: <CheckCircle2 size={20} />, color: attendance >= 75 ? 'text-emerald-500' : 'text-red-500', bg: attendance >= 75 ? 'bg-emerald-50 dark:bg-emerald-900/30' : 'bg-red-50 dark:bg-red-900/30' },
     { label: 'Study Hours', value: studyHours, sub: 'This week', icon: <Clock size={20} />, color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-900/30' },
-    { label: 'Feedback', value: feedbacks.length, sub: 'Received', icon: <MessageSquare size={20} />, color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/30' },
+    { label: 'Feedback', value: (Array.isArray(feedbacks) ? feedbacks : []).length, sub: 'Received', icon: <MessageSquare size={20} />, color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/30' },
     { label: 'Placement Readiness', value: `${placementPct}%`, sub: placementPct >= 70 ? 'Excellent' : placementPct >= 40 ? 'Good' : 'Needs work', icon: <Award size={20} />, color: placementPct >= 70 ? 'text-emerald-500' : placementPct >= 40 ? 'text-amber-500' : 'text-red-500', bg: 'bg-sky-50 dark:bg-sky-900/30' },
   ];
 

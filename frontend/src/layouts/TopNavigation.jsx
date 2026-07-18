@@ -106,8 +106,8 @@ export default function TopNavigation({ onMenuClick }) {
     } catch { /* ignore */ }
   };
 
-  const unread = notifications.filter((n) => !n.is_read).length;
-  const recent = notifications.slice(0, 5);
+  const unread = (Array.isArray(notifications) ? notifications : []).filter((n) => !n.is_read).length;
+  const recent = (Array.isArray(notifications) ? notifications : []).slice(0, 5);
 
   // ── User info ─────────────────────────────────────────────────────────────
   const initials = user?.name

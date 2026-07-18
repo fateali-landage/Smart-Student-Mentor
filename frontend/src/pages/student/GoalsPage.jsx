@@ -57,8 +57,11 @@ export default function GoalsPage() {
   const fetchGoals = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await authFetch('/api/goals');
-      setGoals(Array.isArray(data) ? data : []);
+      const res = await authFetch('/api/goals');
+      if (res.ok) {
+        const data = await res.json();
+        setGoals(Array.isArray(data?.goals) ? data.goals : []);
+      }
     } catch (e) {
       showToast(e.message || 'Failed to load goals', 'error');
     } finally {
@@ -68,7 +71,8 @@ export default function GoalsPage() {
 
   useEffect(() => { fetchGoals(); }, [fetchGoals]);
 
-  const enrichedGoals = goals.map(g => ({ ...g, status: computeStatus(g) }));
+  const goalsList = Array.isArray(goals) ? goals : [];
+  const enrichedGoals = goalsList.map(g => ({ ...g, status: computeStatus(g) }));
 
   const filtered = enrichedGoals.filter(g => {
     const matchFilter = filter === 'All' || g.status === filter.toLowerCase().replace(' ', '_');
