@@ -519,7 +519,7 @@ def register():
     Public endpoint — register a new student or mentor.
     Admin role is explicitly blocked.
     """
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(force=True, silent=True) or {}
     name     = (data.get("name")     or "").strip()
     email    = (data.get("email")    or "").strip().lower()
     password = (data.get("password") or "").strip()
@@ -584,7 +584,7 @@ def register():
 @limiter.limit("5 per minute")
 def login():
     """Verify credentials and return JWT pair."""
-    data     = request.get_json(silent=True) or {}
+    data     = request.get_json(force=True, silent=True) or {}
     email    = (data.get("email")    or "").strip().lower()
     password = (data.get("password") or "").strip()
 
@@ -633,7 +633,7 @@ def login():
 @app.route("/api/refresh", methods=["POST"])
 def refresh_token_endpoint():
     """Exchange a valid refresh token for a new access token."""
-    data  = request.get_json(silent=True) or {}
+    data  = request.get_json(force=True, silent=True) or {}
     token = data.get("refresh_token", "")
 
     if not token:
@@ -688,7 +688,7 @@ def refresh_token_endpoint():
 @require_auth
 def logout():
     """Invalidate the provided refresh token."""
-    data  = request.get_json(silent=True) or {}
+    data  = request.get_json(force=True, silent=True) or {}
     token = data.get("refresh_token", "")
 
     if not token:
@@ -708,7 +708,7 @@ def logout():
 def request_reset_password():
     """Generate a 6-digit OTP code for password reset and log it."""
     import random
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(force=True, silent=True) or {}
     email = (data.get("email") or "").strip().lower()
 
     if not email:
@@ -750,7 +750,7 @@ def request_reset_password():
 @app.route("/api/reset-password", methods=["POST"])
 def reset_password():
     """Reset password using email verification code (OTP)."""
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(force=True, silent=True) or {}
     email = (data.get("email") or "").strip().lower()
     new_pass = (data.get("new_password") or "").strip()
     code = (data.get("code") or "").strip()
@@ -879,7 +879,7 @@ def get_me():
 @require_auth
 def update_me():
     """Update the authenticated user's own profile fields."""
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(force=True, silent=True) or {}
     allowed = ["name", "bio", "phone", "skills", "interests",
                "github_url", "linkedin_url", "profile_pic_url"]
 
@@ -919,7 +919,7 @@ def update_me():
 @require_auth
 def change_password():
     """Change the authenticated user's own password."""
-    data         = request.get_json(silent=True) or {}
+    data         = request.get_json(force=True, silent=True) or {}
     old_password = (data.get("old_password") or "").strip()
     new_password = (data.get("new_password") or "").strip()
 
@@ -958,7 +958,7 @@ def change_password():
 @require_role("admin")
 def admin_add_user():
     """Admin — create a new user with any role, including admin."""
-    data     = request.get_json(silent=True) or {}
+    data     = request.get_json(force=True, silent=True) or {}
     name     = (data.get("name")     or "").strip()
     email    = (data.get("email")    or "").strip().lower()
     password = (data.get("password") or "").strip()
@@ -1098,7 +1098,7 @@ def get_goals():
 @require_role("student")
 def create_goal():
     """Student creates a new goal. student_id comes from JWT — never from the body."""
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(force=True, silent=True) or {}
     title = (data.get("title") or "").strip()
     if not title:
         return jsonify({"status": "error", "message": "title is required"}), 400
@@ -1134,7 +1134,7 @@ def create_goal():
 @require_auth
 def update_goal(gid):
     """Update goal metadata (title, description, priority, due_date, category)."""
-    data    = request.get_json(silent=True) or {}
+    data    = request.get_json(force=True, silent=True) or {}
     allowed = ["title", "description", "priority", "due_date", "category"]
     updates = {k: data[k] for k in allowed if k in data}
 
@@ -1171,7 +1171,7 @@ def update_goal(gid):
 @require_auth
 def update_goal_progress(gid):
     """Update goal progress (0-100); auto-derive status."""
-    data     = request.get_json(silent=True) or {}
+    data     = request.get_json(force=True, silent=True) or {}
     progress = data.get("progress")
 
     if progress is None:
@@ -1250,7 +1250,7 @@ def delete_goal(gid):
 @require_role("student")
 def request_mentor():
     """Student submits a mentor request."""
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(force=True, silent=True) or {}
     try:
         db  = get_db()
         cur = db.cursor()
@@ -1312,7 +1312,7 @@ def pending_requests():
 @require_role("admin")
 def assign_mentor():
     """Admin assigns a mentor to a student by updating both the request and the user record."""
-    data       = request.get_json(silent=True) or {}
+    data       = request.get_json(force=True, silent=True) or {}
     student_id = data.get("student_id")
     mentor_id  = data.get("mentor_id")
     request_id = data.get("request_id")
@@ -1402,7 +1402,7 @@ def give_feedback():
     Mentor gives feedback to a student.
     Mentors may only give feedback to their OWN assigned students.
     """
-    data       = request.get_json(silent=True) or {}
+    data       = request.get_json(force=True, silent=True) or {}
     student_id = data.get("student_id")
     text       = data.get("feedback_text", "").strip()
     rating     = data.get("rating")
@@ -1581,7 +1581,7 @@ def update_performance():
     Upsert performance data.
     Students update their own record; mentors/admin specify student_id.
     """
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(force=True, silent=True) or {}
     role = g.current_user_role
 
     if role == "student":
@@ -1741,7 +1741,7 @@ def get_sessions():
 @require_role("student")
 def book_session():
     """Student books a session with their assigned mentor."""
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(force=True, silent=True) or {}
     title        = (data.get("title")        or "").strip()
     scheduled_at = data.get("scheduled_at")
 
@@ -1820,7 +1820,7 @@ def _update_session_status(sid: int, new_status: str, extra_fields: dict = None)
 def approve_session(sid):
     """Mentor approves a pending session request."""
     try:
-        data = request.get_json(silent=True) or {}
+        data = request.get_json(force=True, silent=True) or {}
         meeting_link = data.get("meeting_link")
         extra = {"meeting_link": meeting_link} if meeting_link else {}
         updated, err, code = _update_session_status(sid, "approved", extra)
@@ -1868,7 +1868,7 @@ def complete_session(sid):
 @require_role("mentor", "admin")
 def add_session_notes(sid):
     """Mentor adds notes to a session."""
-    data  = request.get_json(silent=True) or {}
+    data  = request.get_json(force=True, silent=True) or {}
     notes = data.get("notes", "")
     try:
         db  = get_db()
@@ -1940,7 +1940,7 @@ def get_tasks():
 @require_role("mentor", "admin")
 def create_task():
     """Mentor creates a task for one of their assigned students."""
-    data       = request.get_json(silent=True) or {}
+    data       = request.get_json(force=True, silent=True) or {}
     student_id = data.get("student_id")
     title      = (data.get("title") or "").strip()
 
@@ -1993,7 +1993,7 @@ def create_task():
 @require_role("student")
 def submit_task(tid):
     """Student submits work for a task."""
-    data            = request.get_json(silent=True) or {}
+    data            = request.get_json(force=True, silent=True) or {}
     submission_text = data.get("submission_text", "")
 
     try:
@@ -2033,7 +2033,7 @@ def submit_task(tid):
 @require_role("mentor", "admin")
 def review_task(tid):
     """Mentor reviews a submitted task and optionally approves it."""
-    data     = request.get_json(silent=True) or {}
+    data     = request.get_json(force=True, silent=True) or {}
     feedback = data.get("feedback", "")
     approved = data.get("approved", False)
     new_status = "approved" if approved else "reviewed"
@@ -2123,7 +2123,7 @@ def get_portfolio():
 @require_role("student")
 def add_portfolio_item():
     """Student adds a new portfolio item."""
-    data  = request.get_json(silent=True) or {}
+    data  = request.get_json(force=True, silent=True) or {}
     title = (data.get("title") or "").strip()
     if not title:
         return jsonify({"status": "error", "message": "title is required"}), 400
@@ -2236,7 +2236,7 @@ def check_achievements():
         if role == "student":
             student_id = g.current_user_id
         else:
-            data       = request.get_json(silent=True) or {}
+            data       = request.get_json(force=True, silent=True) or {}
             student_id = data.get("student_id", g.current_user_id)
 
         # Gather data
