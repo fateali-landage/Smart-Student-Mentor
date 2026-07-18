@@ -156,6 +156,7 @@ def init_db():
                     github_url       TEXT,
                     linkedin_url     TEXT,
                     profile_pic_url  TEXT,
+                    resume_data      TEXT,
                     mentor_id        INTEGER REFERENCES users(id) ON DELETE SET NULL,
                     is_active        BOOLEAN DEFAULT TRUE,
                     created_at       TIMESTAMPTZ DEFAULT NOW(),
@@ -173,6 +174,7 @@ def init_db():
                 ("github_url",      "TEXT"),
                 ("linkedin_url",    "TEXT"),
                 ("profile_pic_url", "TEXT"),
+                ("resume_data",      "TEXT"),
                 ("is_active",       "BOOLEAN DEFAULT TRUE"),
                 ("created_at",      "TIMESTAMPTZ DEFAULT NOW()"),
                 ("updated_at",      "TIMESTAMPTZ DEFAULT NOW()"),
@@ -858,7 +860,7 @@ def get_me():
         cur.execute(
             """
             SELECT id, name, email, role, bio, phone, skills, interests,
-                   github_url, linkedin_url, profile_pic_url, mentor_id,
+                   github_url, linkedin_url, profile_pic_url, resume_data, mentor_id,
                    is_active, created_at, updated_at
             FROM users
             WHERE id = %s AND deleted_at IS NULL
@@ -881,7 +883,7 @@ def update_me():
     """Update the authenticated user's own profile fields."""
     data = request.get_json(force=True, silent=True) or {}
     allowed = ["name", "bio", "phone", "skills", "interests",
-               "github_url", "linkedin_url", "profile_pic_url"]
+               "github_url", "linkedin_url", "profile_pic_url", "resume_data"]
 
     updates = {k: data[k] for k in allowed if k in data}
     if not updates:
@@ -903,7 +905,7 @@ def update_me():
         cur.execute(
             """
             SELECT id, name, email, role, bio, phone, skills, interests,
-                   github_url, linkedin_url, profile_pic_url, mentor_id, is_active
+                   github_url, linkedin_url, profile_pic_url, resume_data, mentor_id, is_active
             FROM users WHERE id = %s
             """,
             (g.current_user_id,),
