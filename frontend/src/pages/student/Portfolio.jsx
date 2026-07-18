@@ -171,7 +171,7 @@ export default function Portfolio() {
   const itemsList = Array.isArray(items) ? items : [];
   const filteredItems = itemsList.filter(item => item.type === activeTab.slice(0, -1) || item.type === activeTab); // Handles singular/plural mapping
 
-  // Base64 file upload helper
+  // File upload helper using FormData
   const handleResumeUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -180,25 +180,31 @@ export default function Portfolio() {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64Data = reader.result;
-      try {
-        const res = await authFetch('/api/users/me', {
-          method: 'PUT',
-          body: JSON.stringify({ resume_data: base64Data }) // backend-supported profile pic / bio / phone fields
-        });
-        if (res.ok) {
-          showToast("Resume uploaded successfully!", "success");
-        } else {
-          showToast("Failed to upload resume", "error");
+    const formData = new FormData();
+    formData.append("resume", file);
+
+    try {
+      const res = await authFetch('/api/users/me', {
+        method: 'PUT',
+        body: formData
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user) {
+          setProfile(data.user);
+          if (updateUser) {
+            updateUser(data.user);
+          }
         }
-      } catch (err) {
-        console.error(err);
-        showToast("Resume upload failed", "error");
+        showToast("Resume uploaded successfully!", "success");
+      } else {
+        const errorData = await res.json().catch(() => null);
+        showToast(errorData?.message || "Failed to upload resume", "error");
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error(err);
+      showToast("Resume upload failed", "error");
+    }
   };
 
   if (loading) {

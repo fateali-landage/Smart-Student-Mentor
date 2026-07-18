@@ -23,7 +23,7 @@ export async function authFetch(path, options = {}) {
   const token = localStorage.getItem('access_token');
 
   const headers = {
-    'Content-Type': 'application/json',
+    ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers || {}),
   };

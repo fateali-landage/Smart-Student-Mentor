@@ -92,6 +92,22 @@ def log_cors_request():
             logger.warning(f"CORS Request: Rejected origin = {origin}")
 
 # ---------------------------------------------------------------------------
+
+UPLOAD_FOLDER = os.path.join(os.path.abspath(os.path.dirname(__file__)), "uploads")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024  # 2MB
+
+ALLOWED_EXTENSIONS = {"pdf", "doc", "docx"}
+
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route("/uploads/<filename>")
+def uploaded_file(filename):
+    from flask import send_from_directory
+    return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
+
 # Rate limiter
 # ---------------------------------------------------------------------------
 
@@ -156,7 +172,7 @@ def init_db():
                     github_url       TEXT,
                     linkedin_url     TEXT,
                     profile_pic_url  TEXT,
-                    resume_data      TEXT,
+                    resume_url       TEXT,
                     mentor_id        INTEGER REFERENCES users(id) ON DELETE SET NULL,
                     is_active        BOOLEAN DEFAULT TRUE,
                     created_at       TIMESTAMPTZ DEFAULT NOW(),
@@ -860,7 +876,7 @@ def get_me():
         cur.execute(
             """
             SELECT id, name, email, role, bio, phone, skills, interests,
-                   github_url, linkedin_url, profile_pic_url, resume_data, mentor_id,
+                   github_url, linkedin_url, profile_pic_url, resume_url, mentor_id,
                    is_active, created_at, updated_at
             FROM users
             WHERE id = %s AND deleted_at IS NULL
@@ -880,10 +896,57 @@ def get_me():
 @app.route("/api/users/me", methods=["PUT"])
 @require_auth
 def update_me():
-    """Update the authenticated user's own profile fields."""
+    """Update the authenticated user's own profile fields or handle multipart resume upload."""
+    
+    # Check if this is a multipart file upload (resume)
+    if request.files:
+        if "resume" not in request.files:
+            return jsonify({"status": "error", "message": "Resume file is missing."}), 400
+            
+        file = request.files["resume"]
+        if file.filename == "":
+            return jsonify({"status": "error", "message": "No file selected."}), 400
+            
+        if not allowed_file(file.filename):
+            return jsonify({"status": "error", "message": "Invalid file type. Allowed: PDF, DOC, DOCX."}), 400
+            
+        # Save file securely
+        from werkzeug.utils import secure_filename
+        import uuid
+        
+        filename = secure_filename(file.filename)
+        unique_name = f"{uuid.uuid4().hex}_{filename}"
+        filepath = os.path.join(app.config["UPLOAD_FOLDER"], unique_name)
+        file.save(filepath)
+        
+        resume_url = f"/uploads/{unique_name}"
+        
+        try:
+            db  = get_db()
+            cur = db.cursor()
+            cur.execute(
+                "UPDATE users SET resume_url = %s, updated_at = NOW() WHERE id = %s",
+                (resume_url, g.current_user_id),
+            )
+            db.commit()
+            
+            cur.execute(
+                """
+                SELECT id, name, email, role, bio, phone, skills, interests,
+                       github_url, linkedin_url, profile_pic_url, resume_url, mentor_id, is_active
+                FROM users WHERE id = %s
+                """,
+                (g.current_user_id,),
+            )
+            user = cur.fetchone()
+            return jsonify({"status": "success", "user": dict(user), "message": "Resume uploaded successfully!"}), 200
+        except Exception as exc:
+            return internal_error(exc, "update_me_resume")
+
+    # Regular JSON profile update
     data = request.get_json(force=True, silent=True) or {}
     allowed = ["name", "bio", "phone", "skills", "interests",
-               "github_url", "linkedin_url", "profile_pic_url", "resume_data"]
+               "github_url", "linkedin_url", "profile_pic_url", "resume_url"]
 
     updates = {k: data[k] for k in allowed if k in data}
     if not updates:
@@ -905,7 +968,7 @@ def update_me():
         cur.execute(
             """
             SELECT id, name, email, role, bio, phone, skills, interests,
-                   github_url, linkedin_url, profile_pic_url, resume_data, mentor_id, is_active
+                   github_url, linkedin_url, profile_pic_url, resume_url, mentor_id, is_active
             FROM users WHERE id = %s
             """,
             (g.current_user_id,),
