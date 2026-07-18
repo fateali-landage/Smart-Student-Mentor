@@ -100,6 +100,7 @@ limiter = Limiter(
     app=app,
     default_limits=[],          # No global limit; we set per-route limits
     storage_uri="memory://",    # Use Redis URI in production for multi-worker
+    enabled=not IS_DEV,
 )
 
 # ---------------------------------------------------------------------------
@@ -490,6 +491,21 @@ def internal_error(exc: Exception, context: str = ""):
     logger.error("Internal error [%s]: %s", context, exc, exc_info=True)
     msg = str(exc) if IS_DEV else "An internal server error occurred."
     return jsonify({"status": "error", "message": msg}), 500
+
+
+@app.errorhandler(404)
+def handle_404(error):
+    return jsonify({"status": "error", "message": "Endpoint not found"}), 404
+
+
+@app.errorhandler(405)
+def handle_405(error):
+    return jsonify({"status": "error", "message": "Method not allowed"}), 405
+
+
+@app.errorhandler(500)
+def handle_500(error):
+    return jsonify({"status": "error", "message": "An internal server error occurred"}), 500
 
 
 # ===========================================================================
@@ -2454,52 +2470,73 @@ def recommendations():
         recs = []
 
         if att < 75:
+            msg = f"Your attendance is {att}%. Aim for at least 75% to stay on track."
             recs.append({
                 "type":    "warning",
+                "level":   "warning",
                 "title":   "Improve Attendance",
-                "message": f"Your attendance is {att}%. Aim for at least 75% to stay on track.",
+                "message": msg,
+                "description": msg,
             })
 
         if study_hrs < 10:
+            msg = "You have logged fewer than 10 study hours. Try to study at least 1–2 hours daily."
             recs.append({
                 "type":    "tip",
+                "level":   "info",
                 "title":   "Increase Study Hours",
-                "message": "You have logged fewer than 10 study hours. Try to study at least 1–2 hours daily.",
+                "message": msg,
+                "description": msg,
             })
 
         if len(skills) < 3:
+            msg = "Adding more skills to your profile increases your placement score and visibility."
             recs.append({
                 "type":    "tip",
+                "level":   "info",
                 "title":   "Add More Skills",
-                "message": "Adding more skills to your profile increases your placement score and visibility.",
+                "message": msg,
+                "description": msg,
             })
 
         if completed_goals == 0:
+            msg = "You haven't completed any goals yet. Mark a goal as complete to earn your first badge."
             recs.append({
                 "type":    "action",
+                "level":   "info",
                 "title":   "Complete a Goal",
-                "message": "You haven't completed any goals yet. Mark a goal as complete to earn your first badge.",
+                "message": msg,
+                "description": msg,
             })
 
         if portfolio_cnt < 2:
+            msg = "Add at least 2–3 projects or certifications to your portfolio."
             recs.append({
                 "type":    "action",
+                "level":   "info",
                 "title":   "Build Your Portfolio",
-                "message": "Add at least 2–3 projects or certifications to your portfolio.",
+                "message": msg,
+                "description": msg,
             })
 
         if "python" not in [s.lower() for s in skills] and "web" in " ".join(interests).lower():
+            msg = "Python is highly sought after for web development. Consider adding it to your skills."
             recs.append({
                 "type":    "resource",
+                "level":   "info",
                 "title":   "Learn Python",
-                "message": "Python is highly sought after for web development. Consider adding it to your skills.",
+                "message": msg,
+                "description": msg,
             })
 
         if not recs:
+            msg = "You are on track! Keep completing goals and expanding your portfolio."
             recs.append({
                 "type":    "success",
+                "level":   "info",
                 "title":   "Great Progress!",
-                "message": "You are on track! Keep completing goals and expanding your portfolio.",
+                "message": msg,
+                "description": msg,
             })
 
         return jsonify({"status": "success", "recommendations": recs}), 200

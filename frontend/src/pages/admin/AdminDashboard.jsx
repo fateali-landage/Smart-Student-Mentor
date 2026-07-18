@@ -18,7 +18,7 @@ export default function AdminDashboard() {
     try {
       const res = await authFetch('/api/pending-requests');
       const json = await res.json();
-      setPending(Array.isArray(json) ? json : []);
+      setPending(Array.isArray(json?.requests) ? json.requests : []);
     } catch {
       setPending([]);
     }

@@ -34,15 +34,35 @@ export default function SystemReports() {
       const overRes = await authFetch('/api/reports/overview');
       if (overRes.ok) {
         const overData = await overRes.json();
-        setOverview(overData);
+        const rawOverview = overData.overview || overData || {};
+        
+        // Sum total users and resolve roles
+        const roleCounts = rawOverview.users || {};
+        const totalUsers = Object.values(roleCounts).reduce((a, b) => a + Number(b), 0);
+        const studentsCount = Number(roleCounts.student || 0);
+        const mentorsCount = Number(roleCounts.mentor || 0);
+        
+        // Sum sessions
+        const sessionCounts = rawOverview.sessions || {};
+        const sessionsCount = Object.values(sessionCounts).reduce((a, b) => a + Number(b), 0);
+        
+        setOverview({
+          ...rawOverview,
+          total_users: totalUsers,
+          students_count: studentsCount,
+          mentors_count: mentorsCount,
+          completed_goals: rawOverview.completed_goals || rawOverview.total_goals || 0,
+          goals_count: rawOverview.total_goals || 0,
+          sessions_count: sessionsCount,
+        });
       }
 
       // 2. Fetch Performance reports
       const perfRes = await authFetch('/api/reports/performance');
       if (perfRes.ok) {
         const perfData = await perfRes.json();
-        // The backend returns student performance records e.g. [{ student_name, attendance, average_marks, study_hours, goals_count }]
-        const studentsList = perfData.performance || perfData.students || perfData || [];
+        // The backend returns student performance records under "data"
+        const studentsList = perfData.data || perfData.performance || perfData.students || perfData || [];
         setPerformanceData(studentsList);
         
         // Setup mock/mapped mentor data if not present on backend

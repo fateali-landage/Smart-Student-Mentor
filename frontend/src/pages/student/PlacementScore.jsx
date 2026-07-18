@@ -24,20 +24,36 @@ export default function PlacementScore() {
   const fetchPlacementScore = async () => {
     setLoading(true);
     try {
-      const res = await authFetch('/api/placement-score');
-      if (res.ok) {
-        const data = await res.json();
-        setScoreData(data);
+      const [scoreRes, recsRes] = await Promise.all([
+        authFetch('/api/placement-score'),
+        authFetch('/api/recommendations')
+      ]);
+
+      if (scoreRes.ok) {
+        const scoreDataJson = await scoreRes.json();
+        let recommendationsList = [];
+        if (recsRes && recsRes.ok) {
+          const recsData = await recsRes.json();
+          recommendationsList = recsData.recommendations || [];
+        }
+
+        const mergedData = {
+          ...scoreDataJson,
+          recommendations: recommendationsList
+        };
+
+        setScoreData(mergedData);
 
         // Prep data for Radar Chart
-        const breakdown = data.breakdown || {};
+        const breakdown = mergedData.breakdown || {};
+        const scoreObj = mergedData.score || {};
         const formattedRadar = [
-          { subject: 'Goals Complete', A: breakdown.goals_score ?? 60, B: 100 },
-          { subject: 'Attendance', A: breakdown.attendance_score ?? 80, B: 100 },
-          { subject: 'Portfolio Strength', A: breakdown.portfolio_score ?? 40, B: 100 },
-          { subject: 'Skill Assessments', A: breakdown.skills_score ?? 50, B: 100 },
+          { subject: 'Goals Complete', A: scoreObj.goal_score !== undefined ? Math.round((scoreObj.goal_score / 20) * 100) : (breakdown.goals_score ?? 60), B: 100 },
+          { subject: 'Attendance', A: breakdown.attendance ?? breakdown.attendance_score ?? 80, B: 100 },
+          { subject: 'Portfolio Strength', A: scoreObj.portfolio_score !== undefined ? Math.round((scoreObj.portfolio_score / 15) * 100) : (breakdown.portfolio_score ?? 40), B: 100 },
+          { subject: 'Skill Assessments', A: scoreObj.skill_score !== undefined ? Math.round((scoreObj.skill_score / 20) * 100) : (breakdown.skills_score ?? 50), B: 100 },
           { subject: 'Mock Interviews', A: breakdown.interview_score ?? 70, B: 100 },
-          { subject: 'Study Commitment', A: breakdown.study_score ?? 75, B: 100 }
+          { subject: 'Study Commitment', A: scoreObj.study_score !== undefined ? Math.round((scoreObj.study_score / 15) * 100) : (breakdown.study_score ?? 75), B: 100 }
         ];
         setRadarData(formattedRadar);
         setIsCalculated(true);
@@ -46,7 +62,7 @@ export default function PlacementScore() {
       }
     } catch (err) {
       console.error(err);
-      showToast("Server error calculating placement scores", "error");
+      showToast("Error loading placement data", "error");
     } finally {
       setLoading(false);
     }
@@ -66,7 +82,7 @@ export default function PlacementScore() {
     );
   }
 
-  const score = scoreData?.placement_score ?? 0;
+  const score = scoreData?.score?.total ?? scoreData?.placement_score ?? 0;
   const colors = getScoreColor(score);
   
   // Circular ring variables

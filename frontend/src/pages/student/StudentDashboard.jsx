@@ -62,25 +62,49 @@ export default function StudentDashboard() {
     setLoading(true);
     try {
       const [perf, fb, gl, sess, rec, ps] = await Promise.allSettled([
-        authFetch(`/api/performance/${user?.id}`),
-        authFetch(`/api/feedback/${user?.id}`),
+        authFetch('/api/performance'),
+        authFetch('/api/feedback'),
         authFetch('/api/goals'),
         authFetch('/api/sessions?status=approved&limit=3'),
-        authFetch(`/api/recommendations/${user?.id}`),
+        authFetch('/api/recommendations'),
         authFetch('/api/placement-score'),
       ]);
-      if (perf.status === 'fulfilled') setPerformance(perf.value);
-      if (fb.status === 'fulfilled') setFeedbacks(Array.isArray(fb.value) ? fb.value.slice(0, 3) : []);
-      if (gl.status === 'fulfilled') setGoals(Array.isArray(gl.value) ? gl.value : []);
-      if (sess.status === 'fulfilled') setSessions(Array.isArray(sess.value) ? sess.value.slice(0, 3) : []);
-      if (rec.status === 'fulfilled') setRecommendations(Array.isArray(rec.value) ? rec.value : []);
-      if (ps.status === 'fulfilled') setPlacementScore(ps.value);
+
+      if (perf.status === 'fulfilled' && perf.value.ok) {
+        const json = await perf.value.json().catch(() => null);
+        const p = Array.isArray(json?.performance) ? json.performance[0] : (json?.performance || null);
+        setPerformance(p);
+      }
+      if (fb.status === 'fulfilled' && fb.value.ok) {
+        const json = await fb.value.json().catch(() => null);
+        const list = Array.isArray(json?.feedbacks) ? json.feedbacks : [];
+        setFeedbacks(list.slice(0, 3));
+      }
+      if (gl.status === 'fulfilled' && gl.value.ok) {
+        const json = await gl.value.json().catch(() => null);
+        const list = Array.isArray(json?.goals) ? json.goals : [];
+        setGoals(list);
+      }
+      if (sess.status === 'fulfilled' && sess.value.ok) {
+        const json = await sess.value.json().catch(() => null);
+        const list = Array.isArray(json?.sessions) ? json.sessions : [];
+        setSessions(list.slice(0, 3));
+      }
+      if (rec.status === 'fulfilled' && rec.value.ok) {
+        const json = await rec.value.json().catch(() => null);
+        const list = Array.isArray(json?.recommendations) ? json.recommendations : [];
+        setRecommendations(list);
+      }
+      if (ps.status === 'fulfilled' && ps.value.ok) {
+        const json = await ps.value.json().catch(() => null);
+        setPlacementScore(json);
+      }
     } catch (e) {
       showToast('Failed to load some dashboard data', 'warning');
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
@@ -93,7 +117,7 @@ export default function StudentDashboard() {
   const inProgressGoals = goals.filter(g => g.status === 'in_progress').length;
   const overdueGoals = goals.filter(g => g.status === 'overdue').length;
   const recentGoals = goals.slice(0, 3);
-  const placementPct = placementScore?.overall_score ?? 0;
+  const placementPct = placementScore?.score?.total ?? placementScore?.overall_score ?? 0;
 
   const statCards = [
     { label: 'Goals', value: `${completedGoals}/${goals.length}`, sub: `${inProgressGoals} in progress`, icon: <Target size={20} />, color: 'text-indigo-500', bg: 'bg-indigo-50 dark:bg-indigo-900/30' },

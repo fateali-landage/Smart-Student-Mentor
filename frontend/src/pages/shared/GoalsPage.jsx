@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import BASE_URL from "../../api";
+import { authFetch } from "../../api";
 
 export default function GoalsPage() {
   const [goals, setGoals] = useState([]);
@@ -14,9 +14,11 @@ export default function GoalsPage() {
   useEffect(() => {
     const fetchGoals = async () => {
       try {
-        const res = await fetch(`${BASE_URL}/api/goals`);
-        const data = await res.json();
-        setGoals(data);
+        const res = await authFetch('/api/goals');
+        if (res.ok) {
+          const data = await res.json();
+          setGoals(data.goals || data || []);
+        }
       } catch (err) {
         console.error(err);
         alert("Server not reachable. Please try again.");
@@ -32,18 +34,17 @@ export default function GoalsPage() {
     if (!newGoal.title) return;
 
     try {
-      await fetch(`${BASE_URL}/api/goals`, {
+      await authFetch('/api/goals', {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify(newGoal),
       });
 
       // Refresh goals after adding
-      const res = await fetch(`${BASE_URL}/api/goals`);
-      const data = await res.json();
-      setGoals(data);
+      const res = await authFetch('/api/goals');
+      if (res.ok) {
+        const data = await res.json();
+        setGoals(data.goals || data || []);
+      }
 
       setNewGoal({ title: "", priority: "medium", deadline: "" });
     } catch (error) {

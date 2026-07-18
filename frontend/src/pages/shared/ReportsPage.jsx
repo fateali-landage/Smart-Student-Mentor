@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { MessageSquare, Clock, Award } from 'lucide-react';
 import { useData } from '../../context/DataContext';
-import BASE_URL from '../../api';
+import { authFetch } from '../../api';
 
 export default function ReportsPage() {
   const { data } = useData();
@@ -11,9 +11,12 @@ export default function ReportsPage() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`${BASE_URL}/api/reports/performance`)
+    authFetch('/api/performance')
       .then((r) => r.json())
-      .then((rows) => { if (!cancelled) setPerfRows(Array.isArray(rows) ? rows : []); })
+      .then((json) => {
+        const rows = json?.performance || json?.data || (Array.isArray(json) ? json : []);
+        if (!cancelled) setPerfRows(rows);
+      })
       .catch(() => { if (!cancelled) setPerfRows([]); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };

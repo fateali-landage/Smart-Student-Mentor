@@ -56,7 +56,7 @@ export function DataProvider({ children }) {
     try {
       const res = await authFetch('/api/users');
       const json = await safeJson(res);
-      setData((prev) => ({ ...prev, users: Array.isArray(json) ? json : [] }));
+      setData((prev) => ({ ...prev, users: Array.isArray(json?.users) ? json.users : [] }));
     } catch (err) {
       console.error('[DataContext] fetchUsers:', err);
     }
@@ -66,46 +66,37 @@ export function DataProvider({ children }) {
   const fetchGoals = useCallback(async () => {
     if (!user?.id) return;
     try {
-      const path = user.role === 'student'
-        ? `/api/goals?student_id=${user.id}`
-        : '/api/goals';
-      const res = await authFetch(path);
+      const res = await authFetch('/api/goals');
       const json = await safeJson(res);
-      setData((prev) => ({ ...prev, goals: Array.isArray(json) ? json : [] }));
+      setData((prev) => ({ ...prev, goals: Array.isArray(json?.goals) ? json.goals : [] }));
     } catch (err) {
       console.error('[DataContext] fetchGoals:', err);
     }
-  }, [user?.id, user?.role]);
+  }, [user?.id]);
 
   /** Fetch feedbacks */
   const fetchFeedbacks = useCallback(async () => {
     if (!user?.id) return;
     try {
-      const path = user.role === 'student'
-        ? `/api/feedbacks?student_id=${user.id}`
-        : '/api/feedbacks';
-      const res = await authFetch(path);
+      const res = await authFetch('/api/feedback');
       const json = await safeJson(res);
-      setData((prev) => ({ ...prev, feedbacks: Array.isArray(json) ? json : [] }));
+      setData((prev) => ({ ...prev, feedbacks: Array.isArray(json?.feedbacks) ? json.feedbacks : [] }));
     } catch (err) {
       console.error('[DataContext] fetchFeedbacks:', err);
     }
-  }, [user?.id, user?.role]);
+  }, [user?.id]);
 
   /** Fetch performance data */
   const fetchPerformance = useCallback(async () => {
     if (!user?.id) return;
     try {
-      const path = user.role === 'student'
-        ? `/api/reports/performance?student_id=${user.id}`
-        : '/api/reports/performance';
-      const res = await authFetch(path);
+      const res = await authFetch('/api/performance');
       const json = await safeJson(res);
-      setData((prev) => ({ ...prev, performance: Array.isArray(json) ? json : [] }));
+      setData((prev) => ({ ...prev, performance: Array.isArray(json?.performance) ? json.performance : [] }));
     } catch (err) {
       console.error('[DataContext] fetchPerformance:', err);
     }
-  }, [user?.id, user?.role]);
+  }, [user?.id]);
 
   // ── refreshData — re-fetches data appropriate to the current user's role ────
   const refreshData = useCallback(async () => {
@@ -249,7 +240,7 @@ export function DataProvider({ children }) {
     try {
       const res = await authFetch(`/api/sessions${query}`);
       const json = await safeJson(res);
-      const sessions = Array.isArray(json) ? json : [];
+      const sessions = Array.isArray(json?.sessions) ? json.sessions : [];
       setData((prev) => ({ ...prev, sessions }));
       return sessions;
     } catch (err) {
@@ -262,13 +253,12 @@ export function DataProvider({ children }) {
   // ── Notifications ─────────────────────────────────────────────────────────────
   // ══════════════════════════════════════════════════════════════════════════════
 
-  const getNotifications = useCallback(async (userId) => {
-    const id = userId || user?.id;
-    if (!id) return [];
+  const getNotifications = useCallback(async () => {
+    if (!user?.id) return [];
     try {
-      const res = await authFetch(`/api/notifications/${id}`);
+      const res = await authFetch('/api/notifications');
       const json = await safeJson(res);
-      const notifications = Array.isArray(json) ? json : [];
+      const notifications = Array.isArray(json?.notifications) ? json.notifications : [];
       setData((prev) => ({ ...prev, notifications }));
       return notifications;
     } catch (err) {

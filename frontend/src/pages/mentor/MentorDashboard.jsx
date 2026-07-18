@@ -43,9 +43,9 @@ export default function MentorDashboard() {
     if (!user?.id) { setLoading(false); return; }
     setLoading(true);
     try {
-      const res = await authFetch(`/api/my-students/${user.id}`);
+      const res = await authFetch('/api/my-students');
       const data = await res.json();
-      setStudents(Array.isArray(data) ? data : []);
+      setStudents(Array.isArray(data?.students) ? data.students : []);
     } catch {
       showToast('Failed to load students.', 'error');
     } finally {

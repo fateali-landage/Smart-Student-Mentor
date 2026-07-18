@@ -58,9 +58,9 @@ export default function TopNavigation({ onMenuClick }) {
   const fetchNotifications = useCallback(async () => {
     if (!user?.id) return;
     try {
-      const res = await authFetch(`/api/notifications/${user.id}`);
-      const json = await res.json().catch(() => []);
-      setNotifications(Array.isArray(json) ? json.slice(0, 20) : []);
+      const res = await authFetch('/api/notifications');
+      const json = await res.json().catch(() => null);
+      setNotifications(Array.isArray(json?.notifications) ? json.notifications.slice(0, 20) : []);
     } catch {
       /* ignore network errors */
     }
@@ -91,7 +91,7 @@ export default function TopNavigation({ onMenuClick }) {
   const markAllRead = async () => {
     if (!user?.id) return;
     try {
-      await authFetch(`/api/notifications/read-all/${user.id}`, { method: 'POST' });
+      await authFetch('/api/notifications/read-all', { method: 'POST' });
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
     } catch { /* ignore */ }
   };

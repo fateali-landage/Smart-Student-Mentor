@@ -54,9 +54,9 @@ export default function MyStudentsPage() {
     if (!user?.id) { setLoading(false); return; }
     setLoading(true);
     try {
-      const res = await authFetch(`/api/my-students/${user.id}`);
+      const res = await authFetch('/api/my-students');
       const json = await res.json();
-      setStudents(Array.isArray(json) ? json : []);
+      setStudents(Array.isArray(json?.students) ? json.students : []);
     } catch {
       showToast('Failed to load students.', 'error');
     } finally {
