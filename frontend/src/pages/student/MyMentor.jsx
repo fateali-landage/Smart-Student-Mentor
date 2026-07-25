@@ -125,17 +125,31 @@ export default function MyMentor() {
                 </div>
               </div>
 
-              {/* Bio & Details */}
-              <div className="space-y-6">
+              {/* Mentor Details Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
+                  <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Designation & Experience</h3>
+                  <p className="text-sm text-gray-800 dark:text-gray-200">{mentor.designation || "Senior Mentor"}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{mentor.experience || "5+ years of industry experience"}</p>
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Availability</h3>
+                  <p className="text-sm text-gray-800 dark:text-gray-200 capitalize">{mentor.availability || "Available"}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Assigned on: {new Date(mentor.assigned_at || Date.now()).toLocaleDateString()}</p>
+                </div>
+                <div className="md:col-span-2">
+                  <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Expertise Domain</h3>
+                  <p className="text-sm text-gray-800 dark:text-gray-200">{mentor.expertise || "General Software Engineering"}</p>
+                </div>
+                <div className="md:col-span-2">
                   <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Biography</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
                     {mentor.bio || "No biography provided. Committed to helping you with interview prep, technical career paths, and mock evaluations."}
                   </p>
                 </div>
 
-                <div>
-                  <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Skills & Expertise</h3>
+                <div className="md:col-span-2">
+                  <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Technical Skills</h3>
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     {(Array.isArray(mentor.skills) ? mentor.skills : (mentor.skills ? mentor.skills.split(',') : [])).map(skill => (
                       <span key={skill} className="badge bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-300 text-xs px-2.5 py-1">

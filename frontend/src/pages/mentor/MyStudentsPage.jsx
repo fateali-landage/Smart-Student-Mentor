@@ -177,6 +177,16 @@ export default function MyStudentsPage() {
                       <p className="text-xs text-gray-500 flex items-center gap-1">
                         <Mail size={11} /> {s.email}
                       </p>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {(Array.isArray(s.skills) ? s.skills : (s.skills ? s.skills.split(',') : [])).slice(0, 3).map((skill, idx) => (
+                          <span key={idx} className="text-[10px] px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded">
+                            {skill}
+                          </span>
+                        ))}
+                        {(Array.isArray(s.skills) ? s.skills : (s.skills ? s.skills.split(',') : [])).length > 3 && (
+                           <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded">+{ (Array.isArray(s.skills) ? s.skills : (s.skills ? s.skills.split(',') : [])).length - 3 } more</span>
+                        )}
+                      </div>
                     </div>
                   </div>
 

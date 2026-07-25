@@ -11,6 +11,7 @@ import DashboardLayout from './layouts/DashboardLayout';
 
 // Auth Pages
 import Login from './pages/auth/Login';
+import AdminLogin from './pages/auth/AdminLogin';
 import Register from './pages/auth/Register';
 import ForgotPassword from './pages/auth/ForgotPassword';
 
@@ -18,6 +19,8 @@ import ForgotPassword from './pages/auth/ForgotPassword';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import UserManagement from './pages/admin/UserManagement';
 import SystemReports from './pages/admin/SystemReports';
+import MentorManagement from './pages/admin/MentorManagement';
+import MentorAssignment from './pages/admin/MentorAssignment';
 
 // Mentor Pages
 import MentorDashboard from './pages/mentor/MentorDashboard';
@@ -59,6 +62,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<Navigate to="/login" replace />} />
                 <Route path="/login" element={<Login />} />
+                <Route path="/admin/login" element={<AdminLogin />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
 
@@ -67,6 +71,8 @@ function App() {
                   <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminDashboard /></ProtectedRoute>} />
                   <Route path="/admin/users" element={<ProtectedRoute roles={['admin']}><UserManagement /></ProtectedRoute>} />
                   <Route path="/admin/reports" element={<ProtectedRoute roles={['admin']}><SystemReports /></ProtectedRoute>} />
+                  <Route path="/admin/mentors" element={<ProtectedRoute roles={['admin']}><MentorManagement /></ProtectedRoute>} />
+                  <Route path="/admin/assignments" element={<ProtectedRoute roles={['admin']}><MentorAssignment /></ProtectedRoute>} />
 
                   {/* Mentor Routes */}
                   <Route path="/mentor" element={<ProtectedRoute roles={['mentor']}><MentorDashboard /></ProtectedRoute>} />

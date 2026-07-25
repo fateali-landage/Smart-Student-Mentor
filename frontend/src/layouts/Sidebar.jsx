@@ -42,6 +42,8 @@ function getLinks(role) {
       return [
         { name: 'Overview', path: '/admin', icon: LayoutDashboard, end: true },
         { name: 'User Management', path: '/admin/users', icon: Users },
+        { name: 'Mentor Management', path: '/admin/mentors', icon: ShieldCheck },
+        { name: 'Mentor Assignment', path: '/admin/assignments', icon: Target },
         { name: 'System Reports', path: '/admin/reports', icon: BarChart3 },
         { name: 'Profile', path: '/profile', icon: User },
       ];

@@ -187,6 +187,10 @@ def init_db():
             # Safely add columns that may be missing in an older schema
             for col, definition in [
                 ("bio",             "TEXT"),
+                ("expertise",       "TEXT"),
+                ("designation",     "TEXT"),
+                ("experience",      "TEXT"),
+                ("availability",    "TEXT DEFAULT 'available'"),
                 ("phone",           "TEXT"),
                 ("skills",          "TEXT[] DEFAULT '{}'"),
                 ("interests",       "TEXT[] DEFAULT '{}'"),
@@ -213,6 +217,21 @@ def init_db():
                         END IF;
                     END$$;
                 """)
+
+            # ----------------------------------------------------------------
+            # mentor_assignments
+            # ----------------------------------------------------------------
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS mentor_assignments (
+                    id          SERIAL PRIMARY KEY,
+                    mentor_id   INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                    student_id  INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                    assigned_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                    assigned_at TIMESTAMPTZ DEFAULT NOW(),
+                    status      TEXT DEFAULT 'active' CHECK (status IN ('active', 'reassigned', 'removed'))
+                );
+            """)
+        
 
             # ----------------------------------------------------------------
             # goals
@@ -638,6 +657,9 @@ def login():
 
         if not user:
             return jsonify({"status": "error", "message": "Invalid credentials"}), 401
+            
+        if user["role"] == "admin":
+            return jsonify({"status": "error", "message": "Admins must log in via the Admin Login portal."}), 403
 
         if not user.get("is_active", True):
             return jsonify({"status": "error", "message": "Account is deactivated"}), 403
